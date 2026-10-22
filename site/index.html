@@ -81,9 +81,12 @@
       <div class="canvas" data-canvas>
         <div class="canvas__stage" data-stage></div>
         <div class="canvas__foot">
-          <div class="seg seg--small" role="group" aria-label="Preview backdrop" data-backdrops>
-            <button type="button" data-bg="desk" aria-pressed="true">Desk</button>
-            <button type="button" data-bg="dark" aria-pressed="false">Night</button>
+          <div class="canvas__bg">
+            <span class="canvas__bg-l" id="bg-l">Preview background</span>
+            <div class="seg seg--small" role="group" aria-labelledby="bg-l" data-backdrops title="Only changes the background behind the preview, not your tile">
+              <button type="button" data-bg="desk" aria-pressed="true">Light</button>
+              <button type="button" data-bg="dark" aria-pressed="false">Dark</button>
+            </div>
           </div>
           <span class="canvas__live"><i aria-hidden="true"></i>Live preview</span>
           <span class="canvas__size" data-size-label>320 px</span>

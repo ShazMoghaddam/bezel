@@ -18,6 +18,7 @@
   --code-str: #A9D8B8;
   --focus: #2E6BFF;
   --shadow: 0 1px 1px rgba(17,19,22,.04), 0 8px 24px -12px rgba(17,19,22,.18);
+  --seg-on: #FFFFFF;
 
   --f-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --f-body: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -33,6 +34,7 @@
     --ink: #ECEEF1; --ink-2: #A9AFB8; --ink-3: #737A84; --accent: #FF6A2E; --accent-ink: #120A06;
     --code-bg: #0A0B0D; --code-ink: #E6E8EB; --focus: #6E9BFF;
     --shadow: 0 1px 1px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.7);
+    --seg-on: #30353D;
     color-scheme: dark;
   }
 }
@@ -41,6 +43,7 @@
   --ink: #ECEEF1; --ink-2: #A9AFB8; --ink-3: #737A84; --accent: #FF6A2E; --accent-ink: #120A06;
   --code-bg: #0A0B0D; --code-ink: #E6E8EB; --focus: #6E9BFF;
   --shadow: 0 1px 1px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.7);
+  --seg-on: #30353D;
   color-scheme: dark;
 }
 
@@ -154,7 +157,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .tabs button {
   all: unset; cursor: pointer; padding: 8px 14px; border-radius: 10px; font-size: 14px; font-weight: 550; color: var(--ink-2); white-space: nowrap;
 }
-.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+.tabs button[aria-selected="true"] { background: var(--seg-on); color: var(--ink); box-shadow: var(--shadow); }
 .tabs button:focus-visible { outline: 2px solid var(--focus); }
 
 .studio__body {
@@ -181,8 +184,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   transition: background .4s;
 }
 .canvas[data-bg="dark"] { --canvas-bg: radial-gradient(120% 90% at 50% 0%, #22252A 0%, #08090A 100%); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .canvas:not([data-bg]) , :root:not([data-theme="light"]) .canvas[data-bg="desk"] { --canvas-bg: radial-gradient(120% 90% at 50% 0%, #1D2024 0%, #111215 100%); } }
-:root[data-theme="dark"] .canvas[data-bg="desk"] { --canvas-bg: radial-gradient(120% 90% at 50% 0%, #1D2024 0%, #111215 100%); }
+/* Light and Dark are fixed backdrops for judging a tile, whatever the page's own theme. */
+.canvas .seg--small { background: rgba(255,255,255,.6); border-color: rgba(0,0,0,.08); }
+.canvas .seg--small button { color: #4A5059; }
+.canvas .seg--small button[aria-pressed="true"] { background: #fff; color: #111316; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06); }
+.canvas__bg { display: flex; align-items: center; gap: 8px; }
+.canvas__bg-l { font: 500 12px/1 var(--f-mono); color: #7A818B; }
+.canvas[data-bg="dark"] .canvas__bg-l { color: rgba(255,255,255,.6); }
+.canvas[data-bg="desk"] .canvas__live, .canvas[data-bg="desk"] .canvas__size { color: #7A818B; }
+@media (max-width: 1100px) { .canvas__live { display: none; } }
+@media (max-width: 420px) { .canvas__bg-l { display: none; } }
 .canvas__stage { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-items: center; padding: var(--s-6) var(--s-5); min-width: 0; min-height: 0; overflow: hidden; container-type: size; }
 /* The preview always fits the stage, whatever size is set: the code keeps the real size. */
 .canvas__stage > * { max-width: min(100cqw, 100cqh); }
@@ -230,7 +241,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 .seg { display: flex; padding: 3px; gap: 2px; border-radius: 11px; background: var(--ground-2); border: 1px solid var(--line-soft); }
 .seg button { all: unset; flex: 1; text-align: center; cursor: pointer; padding: 7px 8px; border-radius: 8px; font-size: 13px; font-weight: 550; color: var(--ink-2); white-space: nowrap; }
-.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line-soft); }
+.seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line-soft); }
 .seg button:focus-visible { outline: 2px solid var(--focus); }
 .seg--small button { padding: 5px 10px; font-size: 12px; }
 
