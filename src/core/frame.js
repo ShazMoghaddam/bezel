@@ -10,10 +10,11 @@
  */
 export const FRAME_CSS = /* css */ `
 :host {
-  --_font: var(--bezel-font, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Helvetica Neue", Roboto, Arial, sans-serif);
+  --_font: var(--bezel-font, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist", "Inter Display", "Segoe UI Variable Display", "Helvetica Neue", Roboto, Arial, sans-serif);
   --_rim-r: var(--bezel-radius, 22cqw);
-  --_rim-pad: 1.15cqw;
-  --_bezel-pad: 5cqw;
+  /* No metal rim: the black bezel is the outermost layer, so nothing light shows around it. */
+  --_rim-pad: 0px;
+  --_bezel-pad: var(--bezel-thickness, 1.7cqw);
   display: inline-block;
   position: relative;
   box-sizing: border-box;
@@ -36,39 +37,34 @@ export const FRAME_CSS = /* css */ `
 
 .frame { position: absolute; inset: 0; }
 
-/* Device: brushed aluminium rim, black glass bezel, screen. */
+/* Device: a thin black glass bezel of even width on every side, a camera dot and a lifted shadow.
+   There is deliberately no light rim or highlight outside the black. */
 .frame--device {
   border-radius: var(--_rim-r);
-  padding: var(--_rim-pad);
-  background:
-    linear-gradient(150deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 70%, rgba(255,255,255,.55) 100%),
-    linear-gradient(160deg, #f2f3f5 0%, #c6c9ce 38%, #e9ebee 58%, #aeb2b8 100%);
   box-shadow:
     0 0.2cqw 0.4cqw rgba(0,0,0,.10),
     0 1.6cqw 3.2cqw -0.6cqw rgba(0,0,0,.20),
-    0 6cqw 10cqw -3cqw rgba(0,0,0,.30),
-    inset 0 0 0 0.12cqw rgba(255,255,255,.65),
-    inset 0 -0.2cqw 0.3cqw rgba(0,0,0,.18);
+    0 6cqw 10cqw -3cqw rgba(0,0,0,.30);
 }
 .bezel {
   position: relative;
   block-size: 100%;
   border-radius: calc(var(--_rim-r) - var(--_rim-pad));
   padding: var(--_bezel-pad);
-  background: radial-gradient(120% 90% at 30% 0%, #1b1c1f 0%, #050506 60%);
-  box-shadow: inset 0 0 0 0.12cqw rgba(255,255,255,.06);
+  background: #050506;
 }
 .frame--device .bezel::before {
   content: "";
   position: absolute;
-  inset-block-start: calc(var(--_bezel-pad) * 0.42);
+  inset-block-start: calc(var(--_bezel-pad) * 0.5);
   inset-inline-start: 50%;
-  inline-size: 1.15cqw;
+  inline-size: calc(var(--_bezel-pad) * 0.42);
   aspect-ratio: 1;
-  translate: -50% 0;
+  translate: -50% -50%;
   border-radius: 50%;
+  z-index: 60;
   background: radial-gradient(circle at 35% 35%, #3c4a66 0%, #12151c 45%, #050608 75%);
-  box-shadow: 0 0 0 0.25cqw #0c0d10;
+  box-shadow: 0 0 0 0.12cqw #0c0d10;
 }
 .screen {
   position: relative;
@@ -88,7 +84,7 @@ export const FRAME_CSS = /* css */ `
   pointer-events: none;
   z-index: 50;
   background: linear-gradient(155deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 34%);
-  box-shadow: inset 0 0 0 0.3cqw rgba(0,0,0,.18);
+  box-shadow: inset 0 0 0 0.15cqw rgba(0,0,0,.2);
 }
 
 /* Bezel: black border, no rim. */

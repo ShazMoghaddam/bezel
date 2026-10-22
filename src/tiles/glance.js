@@ -4,6 +4,7 @@ import { esc } from '../core/frame.js';
 import { icons, skyIcon } from '../core/icons.js';
 import { parseICS, expandEvents, normaliseEvents } from '../core/ics.js';
 import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
+import { handStyle, lollipopHands, HANDS_CSS } from '../core/hands.js';
 
 /**
  * <bezel-glance>  A dashboard tile: date, analog clock, agenda and weather.
@@ -14,6 +15,7 @@ import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
  *   ics           URL of an .ics feed (the server must allow cross-origin requests)
  *   max-events    events to show (default 3)
  *   hide-weather  replace the weather corner with the week number
+ *   hands         modern | lollipop   (default modern)
  *   location, latitude, longitude, units, refresh   (see <bezel-weather>)
  *
  * Properties
@@ -26,7 +28,7 @@ import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
 
 const C = 50;
 
-function miniDial() {
+function miniDial(style) {
   const ticks = Array.from({ length: 60 }, (_, i) => {
     const major = i % 5 === 0;
     return `<line class="t${major ? ' M' : ''}" x1="${C}" y1="${major ? 7.5 : 8.6}" x2="${C}" y2="${4.6}" transform="rotate(${i * 6} ${C} ${C})"/>`;
@@ -39,21 +41,23 @@ function miniDial() {
   return `<svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
     <circle class="plate" cx="50" cy="50" r="48"/>
     ${ticks}${nums}
-    <g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
+    ${style === 'lollipop'
+      ? lollipopHands({ hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: 'hr', minute: 'mn', second: 'sc' } })
+      : `<g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
     <g class="h mn"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="13"/></g>
     <g class="h sc"><line x1="50" y1="58" x2="50" y2="8"/></g>
-    <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>
+    <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>`}
   </svg>`;
 }
 
 class BezelGlance extends BezelElement {
-  static attributes = [...WEATHER_ATTRIBUTES, 'events', 'ics', 'max-events', 'hide-weather'];
+  static attributes = [...WEATHER_ATTRIBUTES, 'events', 'ics', 'max-events', 'hide-weather', 'hands'];
   static defaultTheme = 'mist';
   static themes = {
-    mist: { surface: '#B9C6CE', ink: '#0F1316', accent: '#FFFFFF', soft: '#DCE3E8' },
-    orchid: { surface: '#D98CF2', ink: '#160F1A', accent: '#4A35D4', soft: '#EBC4F8' },
-    sand: { surface: '#E9DCC6', ink: '#1E1913', accent: '#C2410C', soft: '#F5EDE0' },
-    slate: { surface: '#1C2127', ink: '#EEF1F4', accent: '#7CC4FF', soft: '#2B323A' },
+    mist: { surface: '#B9C6CE', ink: '#0F1316', accent: '#FFFFFF', soft: '#DCE3E8', hand: '#0F1316' },
+    orchid: { surface: '#D98CF2', ink: '#160F1A', accent: '#4A35D4', soft: '#EBC4F8', hand: '#160F1A' },
+    sand: { surface: '#E9DCC6', ink: '#1E1913', accent: '#C2410C', soft: '#F5EDE0', hand: '#1E1913' },
+    slate: { surface: '#1C2127', ink: '#EEF1F4', accent: '#7CC4FF', soft: '#2B323A', hand: '#EEF1F4' },
   };
 
   static styles = /* css */ `
@@ -69,15 +73,16 @@ class BezelGlance extends BezelElement {
     .dial .t { stroke: var(--_ink); stroke-width: .5; opacity: .35; stroke-linecap: round; }
     .dial .t.M { stroke-width: 1.2; opacity: .9; }
     .dial text { font-size: 10px; font-weight: 600; fill: var(--_ink); font-family: var(--_font); }
-    .dial .h line { stroke: var(--_ink); stroke-linecap: round; stroke-width: 1.4; }
+    .dial .h line { stroke: var(--_hand); stroke-linecap: round; stroke-width: 1.4; }
     .dial .h line.w { stroke-width: 3.6; }
     .dial .sc line { stroke: var(--_accent); stroke-width: .9; }
-    .dial .hub { fill: var(--_ink); } .dial .pin { fill: var(--_accent); }
-    .dial .h { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    .dial .hub { fill: var(--_hand); } .dial .pin { fill: var(--_accent); }
+    .dial .h, .dial .lp, .dial .lp-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    ${HANDS_CSS}
 
     .agenda { display: grid; align-content: end; gap: 2.2cqw; min-inline-size: 0; }
     .ev { display: grid; gap: .2cqw; padding-inline-start: 2.6cqw; border-inline-start: 0.9cqw solid var(--_accent); min-inline-size: 0; }
-    .ev .when { font-size: 3.6cqw; font-weight: 700; color: var(--_accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev .when { font-size: 3.5cqw; font-weight: 700; color: var(--_accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev .what { font-size: 4.3cqw; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev.now { border-inline-start-color: var(--_ink); }
     .none { font-size: 4.3cqw; font-weight: 560; opacity: .7; }
@@ -97,6 +102,12 @@ class BezelGlance extends BezelElement {
     .wx .cond { display: flex; align-items: center; gap: 1.2cqw; font-size: 3.7cqw; font-weight: 600; }
     .wx .cond .icon { inline-size: 4.6cqw; }
     .wx .hl { font-size: 3.6cqw; font-weight: 560; opacity: .75; font-variant-numeric: tabular-nums; }
+    .shim { display: block; inline-size: 24cqw; block-size: 3.4cqw; border-radius: 1cqw; margin-block-start: 1cqw;
+      background: linear-gradient(100deg, color-mix(in srgb, var(--_ink), transparent 90%) 30%, color-mix(in srgb, var(--_ink), transparent 78%) 50%, color-mix(in srgb, var(--_ink), transparent 90%) 70%) 0 0 / 300% 100%;
+      animation: shimmer 1.6s ease-in-out infinite; }
+    .shim.big { inline-size: 26cqw; block-size: 16cqw; border-radius: 2.4cqw; }
+    .shim.short { inline-size: 16cqw; }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .sample { font-size: 2.8cqw; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
   `;
 
@@ -184,15 +195,18 @@ class BezelGlance extends BezelElement {
       .slice(0, max);
   }
 
-  #range(e) {
+  /** Short, never-clipped label: the start time, or "Now · until 11:30" while it runs. */
+  #when(e, z) {
     if (e.allDay) return 'All day';
     const opts = { hour: 'numeric', minute: '2-digit', hour12: this.hour12, timeZone: this.timeZone };
+    let f;
     try {
-      const f = new Intl.DateTimeFormat(this.locale, opts);
-      return e.end > e.start ? f.formatRange(e.start, e.end) : f.format(e.start);
+      f = new Intl.DateTimeFormat(this.locale, opts);
     } catch {
-      return new Date(e.start).toLocaleTimeString();
+      f = new Intl.DateTimeFormat('en-GB', opts);
     }
+    if (e.start <= z.ms && e.end > z.ms) return `Now · until ${f.format(e.end)}`;
+    return f.format(e.start);
   }
 
   template(z) {
@@ -203,7 +217,7 @@ class BezelGlance extends BezelElement {
     if (events) {
       lower = events.length
         ? `<div class="agenda">${events
-            .map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? ' now' : ''}"><span class="when">${esc(this.#range(e))}</span><span class="what">${esc(e.title)}</span></div>`)
+            .map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? ' now' : ''}"><span class="when">${esc(this.#when(e, z))}</span><span class="what">${esc(e.title)}</span></div>`)
             .join('')}</div>`
         : '<div class="agenda"><span class="none">Nothing else today</span></div>';
     } else {
@@ -227,15 +241,17 @@ class BezelGlance extends BezelElement {
       const place = w?.place || this.getAttribute('location') || '';
       wx = `<div class="wx">
         <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? '<span class="sample">Sample</span>' : ''}</span>
-        <span class="temp num">${deg(w?.temperature)}</span>
-        <span class="cond">${w ? skyIcon(w.sky, w.isDay) : ''}<span>${esc(w ? w.condition : 'Loading')}</span></span>
-        <span class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</span>
+        ${w
+          ? `<span class="temp num">${deg(w.temperature)}</span>
+             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(w.condition)}</span></span>
+             <span class="hl">H:${deg(w.high)} L:${deg(w.low)}</span>`
+          : '<span class="shim big"></span><span class="shim"></span><span class="shim short"></span>'}
       </div>`;
     }
 
     return `<div class="g" aria-hidden="true">
       <div class="date"><span class="md"><b>${esc(n.weekdayShort[z.weekday].replace('.', ''))}</b> ${esc(n.monthShort[z.month].replace('.', ''))}</span><span class="dd">${z.day}</span></div>
-      <div class="clock">${miniDial()}</div>
+      <div class="clock">${miniDial(handStyle(this.getAttribute('hands')))}</div>
       ${lower}
       ${wx}
     </div>`;

@@ -22,6 +22,7 @@ Open `~/Library/Application Support/Übersicht/widgets/bezel.widget/index.jsx` a
 | `tag`   | `bezel-clock`, `bezel-calendar`, `bezel-weather`, `bezel-glance` or `bezel-poster` |
 | `attrs` | Any attributes from the main README, e.g. `{ variant: 'relief', theme: 'midnight' }` |
 | `size`  | Width in pixels                                                  |
+| `style` | (optional) CSS variables without the `--bezel-` prefix, e.g. `{ hand: '#E6E1D8', radius: 18 }` |
 | `top`, `left` | Position on the desktop in pixels                          |
 | `ics`   | (glance only) a calendar feed URL                                |
 

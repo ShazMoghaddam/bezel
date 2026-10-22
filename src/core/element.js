@@ -19,7 +19,7 @@ export function safeLocale(tag) {
   return ok;
 }
 
-const COMMON_ATTRIBUTES = ['frame', 'theme', 'timezone', 'locale', 'hour-cycle'];
+const COMMON_ATTRIBUTES = ['frame', 'theme', 'night-theme', 'night-hours', 'timezone', 'locale', 'hour-cycle'];
 const FRAMES = new Set(['device', 'bezel', 'none']);
 
 /**
@@ -118,9 +118,26 @@ export class BezelElement extends HTMLElement {
     return prefers12h(this.locale);
   }
 
-  get themeName() {
+  /** The theme chosen with the `theme` attribute, or the tile's default. */
+  get dayTheme() {
     const t = this.getAttribute('theme');
     return t && this.constructor.themes[t] ? t : this.constructor.defaultTheme;
+  }
+
+  /** The theme in use right now: `night-theme` during night hours, otherwise the day theme. */
+  get themeName() {
+    const night = this.getAttribute('night-theme');
+    if (night && this.constructor.themes[night] && this.isNight(this.now())) return night;
+    return this.dayTheme;
+  }
+
+  /** Night runs from 19:00 to 07:00 unless `night-hours="21-6"` says otherwise. */
+  isNight(z) {
+    const m = /^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(this.getAttribute('night-hours') ?? '');
+    const start = m ? Math.min(Number(m[1]), 23) : 19;
+    const end = m ? Math.min(Number(m[2]), 24) : 7; // 24 means midnight at the end of the day
+    if (start === end) return false;
+    return start > end ? z.hours >= start || z.hours < end : z.hours >= start && z.hours < end;
   }
 
   /** Boolean attribute helper: present and not "false". */
@@ -154,7 +171,7 @@ export class BezelElement extends HTMLElement {
 
   render() {
     const z = this.now();
-    this.#lastDayKey = `${z.year}-${z.month}-${z.day}`;
+    this.#lastDayKey = this.#key(z);
     const frame = this.frame;
     this.shadowRoot.innerHTML = `
       <style>${FRAME_CSS}${this.themeCSS()}${this.constructor.styles}</style>
@@ -189,15 +206,19 @@ export class BezelElement extends HTMLElement {
 
   #tick = (ms) => {
     const z = zoned(ms, this.timeZone);
-    const dayKey = `${z.year}-${z.month}-${z.day}`;
-    if (dayKey !== this.#lastDayKey) {
-      // Midnight: layouts such as calendars change shape, so rebuild.
+    if (this.#key(z) !== this.#lastDayKey) {
+      // Midnight, or the switch to or from the night theme: rebuild.
       this.render();
       return;
     }
     this.update(z, false);
     if (z.seconds === 0 && z.millis < 1000) this.#label(z);
   };
+
+  #key(z) {
+    const night = this.hasAttribute('night-theme') ? (this.isNight(z) ? 'n' : 'd') : '';
+    return `${z.year}-${z.month}-${z.day}${night}`;
+  }
 
   #resubscribe() {
     this.#unsubscribe?.();

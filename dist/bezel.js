@@ -10,10 +10,11 @@ var FRAME_CSS = (
   /* css */
   `
 :host {
-  --_font: var(--bezel-font, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Helvetica Neue", Roboto, Arial, sans-serif);
+  --_font: var(--bezel-font, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist", "Inter Display", "Segoe UI Variable Display", "Helvetica Neue", Roboto, Arial, sans-serif);
   --_rim-r: var(--bezel-radius, 22cqw);
-  --_rim-pad: 1.15cqw;
-  --_bezel-pad: 5cqw;
+  /* No metal rim: the black bezel is the outermost layer, so nothing light shows around it. */
+  --_rim-pad: 0px;
+  --_bezel-pad: var(--bezel-thickness, 1.7cqw);
   display: inline-block;
   position: relative;
   box-sizing: border-box;
@@ -36,39 +37,34 @@ var FRAME_CSS = (
 
 .frame { position: absolute; inset: 0; }
 
-/* Device: brushed aluminium rim, black glass bezel, screen. */
+/* Device: a thin black glass bezel of even width on every side, a camera dot and a lifted shadow.
+   There is deliberately no light rim or highlight outside the black. */
 .frame--device {
   border-radius: var(--_rim-r);
-  padding: var(--_rim-pad);
-  background:
-    linear-gradient(150deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 70%, rgba(255,255,255,.55) 100%),
-    linear-gradient(160deg, #f2f3f5 0%, #c6c9ce 38%, #e9ebee 58%, #aeb2b8 100%);
   box-shadow:
     0 0.2cqw 0.4cqw rgba(0,0,0,.10),
     0 1.6cqw 3.2cqw -0.6cqw rgba(0,0,0,.20),
-    0 6cqw 10cqw -3cqw rgba(0,0,0,.30),
-    inset 0 0 0 0.12cqw rgba(255,255,255,.65),
-    inset 0 -0.2cqw 0.3cqw rgba(0,0,0,.18);
+    0 6cqw 10cqw -3cqw rgba(0,0,0,.30);
 }
 .bezel {
   position: relative;
   block-size: 100%;
   border-radius: calc(var(--_rim-r) - var(--_rim-pad));
   padding: var(--_bezel-pad);
-  background: radial-gradient(120% 90% at 30% 0%, #1b1c1f 0%, #050506 60%);
-  box-shadow: inset 0 0 0 0.12cqw rgba(255,255,255,.06);
+  background: #050506;
 }
 .frame--device .bezel::before {
   content: "";
   position: absolute;
-  inset-block-start: calc(var(--_bezel-pad) * 0.42);
+  inset-block-start: calc(var(--_bezel-pad) * 0.5);
   inset-inline-start: 50%;
-  inline-size: 1.15cqw;
+  inline-size: calc(var(--_bezel-pad) * 0.42);
   aspect-ratio: 1;
-  translate: -50% 0;
+  translate: -50% -50%;
   border-radius: 50%;
+  z-index: 60;
   background: radial-gradient(circle at 35% 35%, #3c4a66 0%, #12151c 45%, #050608 75%);
-  box-shadow: 0 0 0 0.25cqw #0c0d10;
+  box-shadow: 0 0 0 0.12cqw #0c0d10;
 }
 .screen {
   position: relative;
@@ -88,7 +84,7 @@ var FRAME_CSS = (
   pointer-events: none;
   z-index: 50;
   background: linear-gradient(155deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 34%);
-  box-shadow: inset 0 0 0 0.3cqw rgba(0,0,0,.18);
+  box-shadow: inset 0 0 0 0.15cqw rgba(0,0,0,.2);
 }
 
 /* Bezel: black border, no rim. */
@@ -205,9 +201,9 @@ var offsetCache = /* @__PURE__ */ new Map();
 var partsFormatters = /* @__PURE__ */ new Map();
 var warned = /* @__PURE__ */ new Set();
 function partsFormatter(timeZone) {
-  let f = partsFormatters.get(timeZone);
-  if (!f) {
-    f = new Intl.DateTimeFormat("en-US", {
+  let f2 = partsFormatters.get(timeZone);
+  if (!f2) {
+    f2 = new Intl.DateTimeFormat("en-US", {
       timeZone,
       hourCycle: "h23",
       year: "numeric",
@@ -217,9 +213,9 @@ function partsFormatter(timeZone) {
       minute: "numeric",
       second: "numeric"
     });
-    partsFormatters.set(timeZone, f);
+    partsFormatters.set(timeZone, f2);
   }
-  return f;
+  return f2;
 }
 function isValidTimeZone(timeZone) {
   if (!timeZone) return false;
@@ -364,7 +360,7 @@ function safeLocale(tag) {
   localeCache.set(tag, ok);
   return ok;
 }
-var COMMON_ATTRIBUTES = ["frame", "theme", "timezone", "locale", "hour-cycle"];
+var COMMON_ATTRIBUTES = ["frame", "theme", "night-theme", "night-hours", "timezone", "locale", "hour-cycle"];
 var FRAMES = /* @__PURE__ */ new Set(["device", "bezel", "none"]);
 var BezelElement = class extends HTMLElement {
   static attributes = [];
@@ -421,8 +417,8 @@ var BezelElement = class extends HTMLElement {
   }
   // ---- Shared settings -------------------------------------------------
   get frame() {
-    const f = this.getAttribute("frame");
-    return FRAMES.has(f) ? f : this.constructor.defaultFrame;
+    const f2 = this.getAttribute("frame");
+    return FRAMES.has(f2) ? f2 : this.constructor.defaultFrame;
   }
   get timeZone() {
     const tz = this.getAttribute("timezone");
@@ -437,9 +433,24 @@ var BezelElement = class extends HTMLElement {
     if (hc === "24") return false;
     return prefers12h(this.locale);
   }
-  get themeName() {
+  /** The theme chosen with the `theme` attribute, or the tile's default. */
+  get dayTheme() {
     const t = this.getAttribute("theme");
     return t && this.constructor.themes[t] ? t : this.constructor.defaultTheme;
+  }
+  /** The theme in use right now: `night-theme` during night hours, otherwise the day theme. */
+  get themeName() {
+    const night = this.getAttribute("night-theme");
+    if (night && this.constructor.themes[night] && this.isNight(this.now())) return night;
+    return this.dayTheme;
+  }
+  /** Night runs from 19:00 to 07:00 unless `night-hours="21-6"` says otherwise. */
+  isNight(z) {
+    const m = /^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(this.getAttribute("night-hours") ?? "");
+    const start = m ? Math.min(Number(m[1]), 23) : 19;
+    const end = m ? Math.min(Number(m[2]), 24) : 7;
+    if (start === end) return false;
+    return start > end ? z.hours >= start || z.hours < end : z.hours >= start && z.hours < end;
   }
   /** Boolean attribute helper: present and not "false". */
   flag(name) {
@@ -464,7 +475,7 @@ var BezelElement = class extends HTMLElement {
   }
   render() {
     const z = this.now();
-    this.#lastDayKey = `${z.year}-${z.month}-${z.day}`;
+    this.#lastDayKey = this.#key(z);
     const frame = this.frame;
     this.shadowRoot.innerHTML = `
       <style>${FRAME_CSS}${this.themeCSS()}${this.constructor.styles}</style>
@@ -495,14 +506,17 @@ var BezelElement = class extends HTMLElement {
   }
   #tick = (ms) => {
     const z = zoned(ms, this.timeZone);
-    const dayKey = `${z.year}-${z.month}-${z.day}`;
-    if (dayKey !== this.#lastDayKey) {
+    if (this.#key(z) !== this.#lastDayKey) {
       this.render();
       return;
     }
     this.update(z, false);
     if (z.seconds === 0 && z.millis < 1e3) this.#label(z);
   };
+  #key(z) {
+    const night = this.hasAttribute("night-theme") ? this.isNight(z) ? "n" : "d" : "";
+    return `${z.year}-${z.month}-${z.day}${night}`;
+  }
   #resubscribe() {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
@@ -529,15 +543,70 @@ function define(tag, ctor) {
   if (typeof customElements !== "undefined" && !customElements.get(tag)) customElements.define(tag, ctor);
 }
 
+// src/core/hands.js
+var HAND_STYLES = ["modern", "lollipop"];
+function handStyle(value) {
+  return HAND_STYLES.includes(value) ? value : "modern";
+}
+var f = (n) => Number(n.toFixed(3));
+function baton(cx, cy, length, base, tip) {
+  const top = cy - length;
+  return `M${f(cx - base)} ${f(cy)} L${f(cx - tip)} ${f(top)} A${f(tip)} ${f(tip)} 0 0 1 ${f(cx + tip)} ${f(top)} L${f(cx + base)} ${f(cy)} A${f(base)} ${f(base)} 0 0 1 ${f(cx - base)} ${f(cy)} Z`;
+}
+function lollipopHands({
+  cx = 50,
+  cy = 50,
+  hour,
+  minute,
+  second,
+  tail = 7,
+  weight = 1,
+  seconds = true,
+  classes = { hour: "hour", minute: "minute", second: "second" },
+  extra = ""
+}) {
+  const w = (n) => n * weight;
+  const dot = w(2.9);
+  const secondHand2 = seconds ? `<g class="${extra} lp-sec ${classes.second}">
+        <line x1="${cx}" y1="${f(cy + tail)}" x2="${cx}" y2="${f(cy - second + dot * 0.6)}" stroke-width="${f(w(0.6))}" />
+        <circle cx="${cx}" cy="${f(cy - second)}" r="${f(dot)}" />
+      </g>` : "";
+  return `
+    <g class="${extra} lp ${classes.hour}"><path class="lp-arm" d="${baton(cx, cy, hour, w(1.35), w(0.95))}" /></g>
+    <g class="${extra} lp ${classes.minute}"><path class="lp-arm" d="${baton(cx, cy, minute, w(1.2), w(0.72))}" /></g>
+    ${secondHand2}
+    <circle class="lp-pivot" cx="${cx}" cy="${cy}" r="${f(w(2.05))}" />
+    <circle class="lp-pin" cx="${cx}" cy="${cy}" r="${f(w(0.62))}" />`;
+}
+var HANDS_CSS = (
+  /* css */
+  `
+  .lp-arm, .lp-pivot { fill: var(--_hand); }
+  .lp-sec line { stroke: var(--_accent); stroke-linecap: round; }
+  .lp-sec circle { fill: var(--_accent); }
+  .lp-pin { fill: color-mix(in srgb, var(--_hand), #000 88%); }
+`
+);
+
 // src/tiles/clock.js
 var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic"]);
+var SCRIPTS = /* @__PURE__ */ new Set(["western", "roman", "persian"]);
 var DEFAULT_THEME = { numerals: "sage", relief: "blush", classic: "porcelain" };
+var ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
+var PERSIAN_DIGITS = "\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9";
+function numeral(h, script = "western") {
+  if (script === "roman") return ROMAN[h % 12];
+  if (script === "persian") return String(h).replace(/\d/g, (d) => PERSIAN_DIGITS[d]);
+  return String(h);
+}
+function cityName(timeZone) {
+  return String(timeZone ?? "").split("/").pop().replace(/_/g, " ");
+}
 var C = 50;
-function hand({ cls, stem, length, width, tail = 0 }) {
-  const stemLine = stem ? `<line x1="${C}" y1="${C}" x2="${C}" y2="${C - stem}" stroke-width="${Math.max(0.9, width * 0.32)}" />` : "";
+function hand({ cls, stem, length, width, cx = C, cy = C }) {
   return `<g class="hand ${cls}">
-    ${stemLine}
-    <line x1="${C}" y1="${stem ? C - stem : C + tail}" x2="${C}" y2="${C - length}" stroke-width="${width}" />
+    <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - stem}" stroke-width="${Math.max(0.5, width * 0.32)}" />
+    <line x1="${cx}" y1="${cy - stem}" x2="${cx}" y2="${cy - length}" stroke-width="${width}" />
   </g>`;
 }
 function secondHand(length, tail) {
@@ -570,8 +639,13 @@ var DEFS = (
   </filter>
 </defs>`
 );
+var BIG = {
+  western: { size: 52, items: [[12, 49, 45.5], [9, 19.5, 68.5], [3, 80.5, 68.5], [6, 50, 95]] },
+  roman: { size: 37, items: [[12, 50, 41], [9, 22, 64.5], [3, 78, 64.5], [6, 50, 92]] },
+  persian: { size: 50, items: [[12, 50, 44], [9, 20, 69], [3, 80, 69], [6, 50, 95]] }
+};
 var BezelClock = class _BezelClock extends BezelElement {
-  static attributes = ["variant", "hide-seconds", "hide-date", "sweep"];
+  static attributes = ["variant", "numerals", "hide-seconds", "hide-date", "sweep", "second-timezone", "second-label", "hands"];
   static themes = {
     sage: { surface: "#5C9268", ink: "#0A0C0A", hand: "#FFFFFF", accent: "#E3F4E6" },
     cobalt: { surface: "#2D4BD2", ink: "#F3F5FF", hand: "#FFFFFF", accent: "#FFD43B" },
@@ -592,10 +666,13 @@ var BezelClock = class _BezelClock extends BezelElement {
     .hub { fill: var(--_hand); }
     .hub-ring { fill: none; stroke: var(--_accent); stroke-width: 0.55; }
     .hub-pin { fill: var(--_surface); }
+    ${HANDS_CSS}
     .numeral { font-family: var(--_font); fill: var(--_ink); font-variant-numeric: lining-nums proportional-nums; }
+    .s-roman .numeral { letter-spacing: -0.02em; }
 
     /* numerals */
     .v-numerals .numeral { font-weight: var(--bezel-numeral-weight, 300); letter-spacing: -0.035em; }
+    .v-numerals.s-roman .numeral { letter-spacing: -0.06em; }
     .v-numerals .date { font-weight: 650; fill: var(--_ink); font-size: 4.3px; letter-spacing: 0.02em; }
 
     /* relief */
@@ -608,8 +685,14 @@ var BezelClock = class _BezelClock extends BezelElement {
     .tick { stroke: var(--_ink); stroke-linecap: round; }
     .tick.minor { stroke-width: 0.35; opacity: .45; }
     .tick.major { stroke-width: 0.9; }
-    .v-classic .numeral { font-weight: 560; font-size: 8.2px; }
+    .v-classic .numeral { font-weight: 560; }
     .v-classic .date { font-weight: 650; fill: var(--_accent); font-size: 3.6px; letter-spacing: 0.08em; }
+    .sub .plate { fill: color-mix(in srgb, var(--_surface), var(--_ink) 6%); stroke: color-mix(in srgb, var(--_ink), transparent 80%); stroke-width: 0.3; }
+    .sub .t { stroke: var(--_ink); stroke-width: 0.4; stroke-linecap: round; opacity: .6; }
+    .sub .hand line { stroke: var(--_ink); }
+    .sub .pin { fill: var(--_accent); }
+    .sub .city { font-family: var(--_font); font-size: 2.5px; font-weight: 650; letter-spacing: 0.1em; fill: var(--_ink); opacity: .75; }
+    .sub .night { fill: color-mix(in srgb, var(--_ink), transparent 88%); }
 
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
@@ -621,9 +704,20 @@ var BezelClock = class _BezelClock extends BezelElement {
     const v = this.getAttribute("variant");
     return VARIANTS.has(v) ? v : "numerals";
   }
-  get themeName() {
+  get script() {
+    const s = this.getAttribute("numerals");
+    return SCRIPTS.has(s) ? s : "western";
+  }
+  get dayTheme() {
     const t = this.getAttribute("theme");
     return t && _BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
+  }
+  get secondZone() {
+    const tz = this.getAttribute("second-timezone");
+    return this.variant === "classic" && tz && isValidTimeZone(tz) ? tz : null;
+  }
+  get hands() {
+    return handStyle(this.getAttribute("hands"));
   }
   get showSeconds() {
     return !this.flag("hide-seconds");
@@ -632,26 +726,26 @@ var BezelClock = class _BezelClock extends BezelElement {
     if (!this.showSeconds) return "second";
     return this.getAttribute("sweep") === "tick" ? "second" : "frame";
   }
-  template(z) {
+  template() {
     const v = this.variant;
+    const script = this.script;
     let dial = "";
     if (v === "numerals") {
+      const { size, items } = BIG[script];
       dial = `
-        <g class="numerals">
-          <text class="numeral" x="49" y="45.5" font-size="52" text-anchor="middle">12</text>
-          <text class="numeral" x="19.5" y="68.5" font-size="52" text-anchor="middle">9</text>
-          <text class="numeral" x="80.5" y="68.5" font-size="52" text-anchor="middle">3</text>
-          <text class="numeral" x="50" y="95" font-size="52" text-anchor="middle">6</text>
-        </g>
+        <g class="numerals">${items.map(([h, x, y]) => `<text class="numeral" x="${x}" y="${y}" font-size="${size}" text-anchor="middle">${numeral(h, script)}</text>`).join("")}</g>
         <text class="date" x="7" y="93.5"></text>`;
     } else if (v === "relief") {
       dial = `<g class="ring">${Array.from({ length: 12 }, (_, i) => {
+        const h = i || 12;
         const deg = i * 30;
         const rad = deg * Math.PI / 180;
         const x = (C + Math.sin(rad) * 35).toFixed(2);
         const y = (C - Math.cos(rad) * 35).toFixed(2);
         const turn = deg > 90 && deg < 270 ? deg - 180 : deg;
-        return `<text class="numeral" data-h="${i || 12}" text-anchor="middle" dominant-baseline="central" font-size="15" transform="rotate(${turn} ${x} ${y})" x="${x}" y="${y}">${i || 12}</text>`;
+        const text = numeral(h, script);
+        const scale = script === "roman" ? Math.min(1, 2 / Math.max(2, text.length)) * 0.95 : 1;
+        return `<text class="numeral" data-h="${h}" data-scale="${scale.toFixed(3)}" text-anchor="middle" dominant-baseline="central" font-size="${(15 * scale).toFixed(2)}" transform="rotate(${turn} ${x} ${y})" x="${x}" y="${y}">${text}</text>`;
       }).join("")}</g>`;
     } else {
       const ticks = Array.from({ length: 60 }, (_, i) => {
@@ -659,17 +753,49 @@ var BezelClock = class _BezelClock extends BezelElement {
         const r1 = major ? 41 : 43;
         return `<line class="tick ${major ? "major" : "minor"}" x1="${C}" y1="${C - r1}" x2="${C}" y2="${C - 45.2}" transform="rotate(${i * 6} ${C} ${C})" />`;
       }).join("");
+      const roman = script === "roman";
+      const zone = this.secondZone;
       const nums = Array.from({ length: 12 }, (_, i) => {
         const h = i + 1;
+        if (zone && h === 6) return "";
         const a = h * 30 * Math.PI / 180;
-        const x = C + Math.sin(a) * 33.5;
-        const y = C - Math.cos(a) * 33.5;
-        return `<text class="numeral" x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="central">${h}</text>`;
+        const r = roman ? 32.5 : 33.5;
+        const text = numeral(h, script);
+        const size = roman ? Math.min(7.4, 15 / Math.max(2, text.length)) : 8.2;
+        return `<text class="numeral" x="${(C + Math.sin(a) * r).toFixed(2)}" y="${(C - Math.cos(a) * r).toFixed(2)}" font-size="${size.toFixed(2)}" text-anchor="middle" dominant-baseline="central">${text}</text>`;
       }).join("");
-      dial = `${ticks}${nums}<text class="date" x="${C}" y="${C + 16}" text-anchor="middle"></text>`;
+      let sub = "";
+      if (zone) {
+        const sx = C;
+        const sy = 68;
+        const subTicks = Array.from(
+          { length: 12 },
+          (_, i) => `<line class="t" x1="${sx}" y1="${sy - 7.6}" x2="${sx}" y2="${sy - (i % 3 === 0 ? 6.2 : 6.9)}" transform="rotate(${i * 30} ${sx} ${sy})" />`
+        ).join("");
+        const label = this.getAttribute("second-label") || cityName(zone);
+        sub = `<g class="sub">
+          <circle class="plate" cx="${sx}" cy="${sy}" r="8.6" />
+          <path class="night" d="" />
+          ${subTicks}
+          ${hand({ cls: "sub-hour", stem: 1.4, length: 4.4, width: 1.1, cx: sx, cy: sy })}
+          ${hand({ cls: "sub-minute", stem: 1.4, length: 6.6, width: 1.1, cx: sx, cy: sy })}
+          <circle class="pin" cx="${sx}" cy="${sy}" r="0.7" />
+          <text class="city" x="${sx}" y="${sy + 13.2}" text-anchor="middle">${esc(label.toLocaleUpperCase(this.locale))}</text>
+        </g>`;
+      }
+      dial = `${ticks}${nums}${sub}<text class="date" x="${C}" y="${zone ? C - 15 : C + 16}" text-anchor="middle"></text>`;
     }
     const heavy = v === "classic" ? 2.2 : 3.1;
-    const hands = `
+    const classic = v === "classic";
+    const hands = this.hands === "lollipop" ? `<g class="hands">${lollipopHands({
+      hour: classic ? 21 : 26,
+      minute: classic ? 33.5 : 39,
+      second: classic ? 31.5 : 37,
+      tail: classic ? 7 : 8,
+      weight: classic ? 1 : 1.12,
+      seconds: this.showSeconds,
+      extra: "hand"
+    })}</g>` : `
       <g class="hands">
         ${hand({ cls: "hour", stem: 6, length: v === "classic" ? 22 : 27, width: heavy })}
         ${hand({ cls: "minute", stem: 6, length: v === "classic" ? 36 : 40, width: heavy })}
@@ -678,7 +804,8 @@ var BezelClock = class _BezelClock extends BezelElement {
         ${this.showSeconds ? `<circle class="hub-ring" cx="${C}" cy="${C}" r="1.15" />` : ""}
         <circle class="hub-pin" cx="${C}" cy="${C}" r="0.55" />
       </g>`;
-    return `<svg class="face v-${v}" viewBox="0 0 100 100" aria-hidden="true">${DEFS}${dial}${hands}</svg>`;
+    const dir = script === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-${v} s-${script}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
   }
   update(z, first) {
     const smooth = this.tickRate === "frame";
@@ -691,7 +818,14 @@ var BezelClock = class _BezelClock extends BezelElement {
       const date = this.$(".date");
       if (date && !this.flag("hide-date")) {
         const wd = names(this.locale).weekdayShort[z.weekday].replace(".", "").toLocaleUpperCase(this.locale);
-        date.textContent = `${wd} ${z.day}`;
+        const day = this.script === "persian" ? numeral(z.day, "persian") : z.day;
+        date.textContent = `${wd} ${day}`;
+      }
+      const zone = this.secondZone;
+      if (zone) {
+        const s = handAngles(zoned(z.ms, zone), { smooth: false });
+        this.$(".sub-hour")?.setAttribute("transform", `rotate(${s.hour.toFixed(2)} ${C} 68)`);
+        this.$(".sub-minute")?.setAttribute("transform", `rotate(${s.minute.toFixed(2)} ${C} 68)`);
       }
     }
     if (this.variant === "relief" && (first || z.seconds !== this.#reliefSecond)) {
@@ -704,22 +838,20 @@ var BezelClock = class _BezelClock extends BezelElement {
     const pos = minuteAngle / 30;
     for (const el of this.$$(".numeral")) {
       const h = Number(el.dataset.h) % 12;
+      const scale = Number(el.dataset.scale) || 1;
       let d = Math.abs(h - pos);
       d = Math.min(d, 12 - d);
       const t = Math.min(1, Math.max(0, (d - 1.2) / 2.6));
       const ease = t * t * (3 - 2 * t);
       el.style.opacity = (1 - ease).toFixed(3);
-      el.setAttribute("font-size", (16.5 - ease * 5).toFixed(2));
+      el.setAttribute("font-size", ((16.5 - ease * 5) * scale).toFixed(2));
     }
   }
   describe(z) {
-    const time = new Intl.DateTimeFormat(this.locale, {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: this.hour12,
-      timeZone: this.timeZone
-    }).format(z.ms);
-    return `Clock showing ${time}`;
+    const fmt = (tz) => new Intl.DateTimeFormat(this.locale, { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: tz }).format(z.ms);
+    const zone = this.secondZone;
+    const second = zone ? `, ${fmt(zone)} in ${this.getAttribute("second-label") || cityName(zone)}` : "";
+    return `Clock showing ${fmt(this.timeZone)}${second}`;
   }
 };
 define("bezel-clock", BezelClock);
@@ -802,7 +934,7 @@ var BezelCalendar = class extends BezelElement {
       padding-block-start: 12cqh;
       font-size: var(--bd-size, 82cqh); line-height: 1; font-weight: 760; letter-spacing: -0.07em;
       color: var(--_accent);
-      opacity: var(--bd-opacity, .9);
+      opacity: var(--bd-opacity, .2);
       font-variant-numeric: lining-nums;
       -webkit-mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
               mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
@@ -830,7 +962,7 @@ var BezelCalendar = class extends BezelElement {
       Date.UTC(year, month, 15)
     );
     return `
-      ${this.flag("hide-backdrop") || !isCurrent ? "" : `<div class="backdrop" aria-hidden="true"${z.day > 9 ? ' style="--bd-size:60cqw;--bd-opacity:.78"' : ""}>${z.day}</div>`}
+      ${this.flag("hide-backdrop") || !isCurrent ? "" : `<div class="backdrop" aria-hidden="true"${z.day > 9 ? ' style="--bd-size:66cqw;--bd-opacity:.16"' : ""}>${z.day}</div>`}
       <div class="cal" aria-hidden="true">
         <div class="head"><span>${esc(monthLabel)}</span>${this.flag("hide-time") ? "" : '<span class="time"></span>'}</div>
         <div class="row">${dows}</div>
@@ -1011,7 +1143,7 @@ function normalise(forecast, air, { units = "metric", place = "" } = {}) {
   };
 }
 function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
-  const f = (cDeg) => units === "imperial" ? Math.round(cDeg * 1.8 + 32) : cDeg;
+  const f2 = (cDeg) => units === "imperial" ? Math.round(cDeg * 1.8 + 32) : cDeg;
   const today = /* @__PURE__ */ new Date();
   const iso = (h, m) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   return {
@@ -1019,8 +1151,8 @@ function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
     place,
     units,
     time: null,
-    temperature: f(14),
-    apparent: f(12),
+    temperature: f2(14),
+    apparent: f2(12),
     humidity: 76,
     wind: units === "imperial" ? 7 : 11,
     windDirection: 240,
@@ -1028,8 +1160,8 @@ function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
     condition: "Partly Cloudy",
     sky: "partly",
     isDay: true,
-    high: f(16),
-    low: f(9),
+    high: f2(16),
+    low: f2(9),
     sunrise: [iso(7, 31)],
     sunset: [iso(17, 52)],
     aqi: units === "imperial" ? 21 : 18,
@@ -1218,6 +1350,13 @@ var BezelWeather = class extends BezelElement {
     /* css */
     `
     .sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, var(--s0) 0%, var(--s1) 55%, var(--s2) 100%); }
+    .tint { position: absolute; inset: 0; z-index: 1; background: var(--bezel-tint, transparent); mix-blend-mode: color; }
+    .shim { display: block; border-radius: 1cqw; background: linear-gradient(100deg, rgba(255,255,255,.14) 30%, rgba(255,255,255,.38) 50%, rgba(255,255,255,.14) 70%) 0 0 / 300% 100%; animation: shimmer 1.6s ease-in-out infinite; }
+    .shim.t { inline-size: 46cqw; block-size: 30cqw; border-radius: 3cqw; }
+    .shim.l { inline-size: 26cqw; block-size: 3.6cqw; }
+    .shim.s { inline-size: 12cqw; block-size: 3.6cqw; }
+    .stat .shim.i { inline-size: 6.4cqw; block-size: 6.4cqw; border-radius: 50%; }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .sky::after { content: ""; position: absolute; inset: 0; z-index: 2;
       background: linear-gradient(180deg, rgba(8,20,40,.30) 0%, rgba(8,20,40,.08) 30%, rgba(8,20,40,0) 52%, rgba(8,20,40,0) 70%, rgba(8,20,40,.18) 100%); }
     .sun { position: absolute; inset-block-start: -22cqh; inset-inline-end: -18cqw; inline-size: 80cqw; aspect-ratio: 1; border-radius: 50%;
@@ -1284,7 +1423,7 @@ var BezelWeather = class extends BezelElement {
     .stat b { font-size: 4.4cqw; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .stat b small { font-size: .72em; font-weight: 600; opacity: .85; margin-inline-start: .3em; }
     .stat span { font-size: 3.5cqw; font-weight: 550; opacity: .82; }
-    .loading .temp, .loading .stats { opacity: .35; }
+    .loading .temp { align-self: center; }
   `
   );
   #source = new WeatherSource(this);
@@ -1322,9 +1461,10 @@ var BezelWeather = class extends BezelElement {
     if (sky === "rain" || sky === "storm") layers.push('<i class="rain"></i>');
     if (sky === "snow") layers.push('<i class="snowfall"></i>');
     if (sky === "storm") layers.push('<i class="flash"></i>');
+    layers.push('<i class="tint"></i>');
     const deg = (v) => v == null || Number.isNaN(v) ? "--" : `${Math.round(v)}\xB0`;
     const place = w?.place || this.getAttribute("location") || "";
-    let stats = "";
+    let stats = Array.from({ length: 4 }, () => '<div class="stat"><span class="shim i"></span><span class="shim s"></span></div>').join("");
     if (w) {
       const sun = nextSunEvent(w);
       const windUnit = w.units === "imperial" ? "mph" : "km/h";
@@ -1339,13 +1479,12 @@ var BezelWeather = class extends BezelElement {
       <div class="content${w ? "" : " loading"}" aria-hidden="true">
         <div class="top">
           <div class="meta">
-            <div class="place">${esc(place)}${w?.sample ? '<span class="sample">Sample</span>' : ""}</div>
-            <div class="cond">${skyIcon(sky, isDay)}<span>${esc(w ? w.condition : "Loading")}</span></div>
-            <div class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</div>
+            <div class="place">${esc(place || (w ? "" : "Weather"))}${w?.sample ? '<span class="sample">Sample</span>' : ""}</div>
+            ${w ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(w.condition)}</span></div><div class="hl">H:${deg(w.high)} L:${deg(w.low)}</div>` : '<span class="shim l"></span><span class="shim s"></span>'}
           </div>
           ${this.flag("hide-time") ? "" : '<div class="time"></div>'}
         </div>
-        <div class="temp">${deg(w?.temperature)}</div>
+        <div class="temp">${w ? deg(w.temperature) : '<span class="shim t"></span>'}</div>
         <div class="stats">${stats}</div>
       </div>`;
   }
@@ -1586,7 +1725,7 @@ function normaliseEvents(list) {
 
 // src/tiles/glance.js
 var C2 = 50;
-function miniDial() {
+function miniDial(style) {
   const ticks = Array.from({ length: 60 }, (_, i) => {
     const major = i % 5 === 0;
     return `<line class="t${major ? " M" : ""}" x1="${C2}" y1="${major ? 7.5 : 8.6}" x2="${C2}" y2="${4.6}" transform="rotate(${i * 6} ${C2} ${C2})"/>`;
@@ -1599,20 +1738,20 @@ function miniDial() {
   return `<svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
     <circle class="plate" cx="50" cy="50" r="48"/>
     ${ticks}${nums}
-    <g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
+    ${style === "lollipop" ? lollipopHands({ hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: "hr", minute: "mn", second: "sc" } }) : `<g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
     <g class="h mn"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="13"/></g>
     <g class="h sc"><line x1="50" y1="58" x2="50" y2="8"/></g>
-    <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>
+    <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>`}
   </svg>`;
 }
 var BezelGlance = class extends BezelElement {
-  static attributes = [...WEATHER_ATTRIBUTES, "events", "ics", "max-events", "hide-weather"];
+  static attributes = [...WEATHER_ATTRIBUTES, "events", "ics", "max-events", "hide-weather", "hands"];
   static defaultTheme = "mist";
   static themes = {
-    mist: { surface: "#B9C6CE", ink: "#0F1316", accent: "#FFFFFF", soft: "#DCE3E8" },
-    orchid: { surface: "#D98CF2", ink: "#160F1A", accent: "#4A35D4", soft: "#EBC4F8" },
-    sand: { surface: "#E9DCC6", ink: "#1E1913", accent: "#C2410C", soft: "#F5EDE0" },
-    slate: { surface: "#1C2127", ink: "#EEF1F4", accent: "#7CC4FF", soft: "#2B323A" }
+    mist: { surface: "#B9C6CE", ink: "#0F1316", accent: "#FFFFFF", soft: "#DCE3E8", hand: "#0F1316" },
+    orchid: { surface: "#D98CF2", ink: "#160F1A", accent: "#4A35D4", soft: "#EBC4F8", hand: "#160F1A" },
+    sand: { surface: "#E9DCC6", ink: "#1E1913", accent: "#C2410C", soft: "#F5EDE0", hand: "#1E1913" },
+    slate: { surface: "#1C2127", ink: "#EEF1F4", accent: "#7CC4FF", soft: "#2B323A", hand: "#EEF1F4" }
   };
   static styles = (
     /* css */
@@ -1629,15 +1768,16 @@ var BezelGlance = class extends BezelElement {
     .dial .t { stroke: var(--_ink); stroke-width: .5; opacity: .35; stroke-linecap: round; }
     .dial .t.M { stroke-width: 1.2; opacity: .9; }
     .dial text { font-size: 10px; font-weight: 600; fill: var(--_ink); font-family: var(--_font); }
-    .dial .h line { stroke: var(--_ink); stroke-linecap: round; stroke-width: 1.4; }
+    .dial .h line { stroke: var(--_hand); stroke-linecap: round; stroke-width: 1.4; }
     .dial .h line.w { stroke-width: 3.6; }
     .dial .sc line { stroke: var(--_accent); stroke-width: .9; }
-    .dial .hub { fill: var(--_ink); } .dial .pin { fill: var(--_accent); }
-    .dial .h { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    .dial .hub { fill: var(--_hand); } .dial .pin { fill: var(--_accent); }
+    .dial .h, .dial .lp, .dial .lp-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    ${HANDS_CSS}
 
     .agenda { display: grid; align-content: end; gap: 2.2cqw; min-inline-size: 0; }
     .ev { display: grid; gap: .2cqw; padding-inline-start: 2.6cqw; border-inline-start: 0.9cqw solid var(--_accent); min-inline-size: 0; }
-    .ev .when { font-size: 3.6cqw; font-weight: 700; color: var(--_accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev .when { font-size: 3.5cqw; font-weight: 700; color: var(--_accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev .what { font-size: 4.3cqw; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ev.now { border-inline-start-color: var(--_ink); }
     .none { font-size: 4.3cqw; font-weight: 560; opacity: .7; }
@@ -1657,6 +1797,12 @@ var BezelGlance = class extends BezelElement {
     .wx .cond { display: flex; align-items: center; gap: 1.2cqw; font-size: 3.7cqw; font-weight: 600; }
     .wx .cond .icon { inline-size: 4.6cqw; }
     .wx .hl { font-size: 3.6cqw; font-weight: 560; opacity: .75; font-variant-numeric: tabular-nums; }
+    .shim { display: block; inline-size: 24cqw; block-size: 3.4cqw; border-radius: 1cqw; margin-block-start: 1cqw;
+      background: linear-gradient(100deg, color-mix(in srgb, var(--_ink), transparent 90%) 30%, color-mix(in srgb, var(--_ink), transparent 78%) 50%, color-mix(in srgb, var(--_ink), transparent 90%) 70%) 0 0 / 300% 100%;
+      animation: shimmer 1.6s ease-in-out infinite; }
+    .shim.big { inline-size: 26cqw; block-size: 16cqw; border-radius: 2.4cqw; }
+    .shim.short { inline-size: 16cqw; }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .sample { font-size: 2.8cqw; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
   `
   );
@@ -1732,22 +1878,25 @@ var BezelGlance = class extends BezelElement {
     const max = Math.max(1, parseInt(this.getAttribute("max-events"), 10) || 3);
     return expandEvents(this.#rawEvents, dayStart, dayEnd).filter((e) => e.end > z.ms || e.allDay && e.end > dayStart).slice(0, max);
   }
-  #range(e) {
+  /** Short, never-clipped label: the start time, or "Now · until 11:30" while it runs. */
+  #when(e, z) {
     if (e.allDay) return "All day";
     const opts = { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: this.timeZone };
+    let f2;
     try {
-      const f = new Intl.DateTimeFormat(this.locale, opts);
-      return e.end > e.start ? f.formatRange(e.start, e.end) : f.format(e.start);
+      f2 = new Intl.DateTimeFormat(this.locale, opts);
     } catch {
-      return new Date(e.start).toLocaleTimeString();
+      f2 = new Intl.DateTimeFormat("en-GB", opts);
     }
+    if (e.start <= z.ms && e.end > z.ms) return `Now \xB7 until ${f2.format(e.end)}`;
+    return f2.format(e.start);
   }
   template(z) {
     const n = names(this.locale);
     const events = this.#todaysEvents(z);
     let lower;
     if (events) {
-      lower = events.length ? `<div class="agenda">${events.map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? " now" : ""}"><span class="when">${esc(this.#range(e))}</span><span class="what">${esc(e.title)}</span></div>`).join("")}</div>` : '<div class="agenda"><span class="none">Nothing else today</span></div>';
+      lower = events.length ? `<div class="agenda">${events.map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? " now" : ""}"><span class="when">${esc(this.#when(e, z))}</span><span class="what">${esc(e.title)}</span></div>`).join("")}</div>` : '<div class="agenda"><span class="none">Nothing else today</span></div>';
     } else {
       const doy = dayOfYear(z.year, z.month, z.day);
       const total = daysInYear(z.year);
@@ -1768,14 +1917,14 @@ var BezelGlance = class extends BezelElement {
       const place = w?.place || this.getAttribute("location") || "";
       wx = `<div class="wx">
         <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? '<span class="sample">Sample</span>' : ""}</span>
-        <span class="temp num">${deg(w?.temperature)}</span>
-        <span class="cond">${w ? skyIcon(w.sky, w.isDay) : ""}<span>${esc(w ? w.condition : "Loading")}</span></span>
-        <span class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</span>
+        ${w ? `<span class="temp num">${deg(w.temperature)}</span>
+             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(w.condition)}</span></span>
+             <span class="hl">H:${deg(w.high)} L:${deg(w.low)}</span>` : '<span class="shim big"></span><span class="shim"></span><span class="shim short"></span>'}
       </div>`;
     }
     return `<div class="g" aria-hidden="true">
       <div class="date"><span class="md"><b>${esc(n.weekdayShort[z.weekday].replace(".", ""))}</b> ${esc(n.monthShort[z.month].replace(".", ""))}</span><span class="dd">${z.day}</span></div>
-      <div class="clock">${miniDial()}</div>
+      <div class="clock">${miniDial(handStyle(this.getAttribute("hands")))}</div>
       ${lower}
       ${wx}
     </div>`;
@@ -1813,10 +1962,10 @@ var BezelPoster = class extends BezelElement {
     `
     :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); }
     .frame--none .screen { border-radius: var(--_rim-r); }
-    .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; padding: 4.2cqw 2.4cqw 2cqw; }
+    .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4.2cqw 2.4cqw 2.4cqw; overflow: hidden; }
     .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }
-    .cols { display: grid; grid-template-columns: repeat(7, 1fr); min-block-size: 0; }
-    .col { display: grid; grid-template-rows: repeat(var(--rows), 1fr); border-inline-start: max(1px, 0.14cqw) solid var(--_rule); padding-inline-start: 0.5cqw; min-inline-size: 0; }
+    .cols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-block-size: 0; container-type: size; }
+    .col { display: grid; grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); border-inline-start: max(1px, 0.14cqw) solid var(--_rule); padding-inline-start: 0.5cqw; min-inline-size: 0; }
     .col:first-child { border-inline-start-color: transparent; }
     .c { font-size: var(--fs); font-weight: 700; line-height: .84; letter-spacing: -0.05em; align-self: end; white-space: nowrap;
          font-variant-numeric: lining-nums proportional-nums; font-feature-settings: "lnum" 1, "pnum" 1; }
@@ -1836,7 +1985,7 @@ var BezelPoster = class extends BezelElement {
     const weeks = monthGrid(year, month, { weekStart, fillAdjacent: false });
     const rows = weeks.length + 1;
     const highlight = !this.flag("no-highlight") && year === z.year && month === z.month;
-    const fs = `min(calc((100cqh - 15cqh) / ${rows} * 1.14), 11cqw)`;
+    const fs = `min(calc(100cqh / ${rows} * 1.08), 12cqw)`;
     const cols = weekdayOrder(weekStart).map((dow, ci) => {
       const head = `<span class="c h">${esc(n.weekdayNarrow[dow])}</span>`;
       const cells = weeks.map((w) => {

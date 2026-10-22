@@ -10,7 +10,7 @@ Drop one line of HTML into any website, turn a spare iPad into a desk clock, or 
 - **Sharp at any size.** Every face is vector SVG and CSS sized in container units, so a tile is equally crisp at 120 px or across a 4K monitor.
 - **Customisable.** Built-in themes, any colour you like through CSS variables, three frame styles, your own typeface, 12 or 24 hour time, any time zone and language.
 - **Live data, no keys.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), which is free and needs no API key. Agendas read standard `.ics` calendar feeds.
-- **Light.** About 19 kB gzipped, no dependencies, no build step needed. All tiles on a page share one timer and pause when off screen.
+- **Light.** About 21 kB gzipped, no dependencies, no build step needed. All tiles on a page share one timer and pause when off screen.
 - **Accessible.** Each tile is labelled for screen readers with the current time, date or conditions, and honours reduced-motion settings.
 
 ## Contents
@@ -62,10 +62,18 @@ An analog clock with three faces.
 | Attribute      | Values                                   | Default          |
 | -------------- | ---------------------------------------- | ---------------- |
 | `variant`      | `numerals`, `relief`, `classic`          | `numerals`       |
+| `numerals`     | `western`, `roman`, `persian`            | `western`        |
 | `theme`        | `sage`, `cobalt`, `ember`, `graphite`, `blush`, `stone`, `midnight`, `porcelain` | depends on variant |
 | `sweep`        | `smooth`, `tick`                         | `smooth`         |
+| `hands`        | `modern`, `lollipop`                     | `modern`         |
 | `hide-seconds` | boolean                                  | off              |
 | `hide-date`    | boolean                                  | off              |
+| `second-timezone` | classic face: a small dial for another city, e.g. `Asia/Tokyo` |  |
+| `second-label` | name under that dial                     | the city name    |
+
+Roman numerals write four as IIII, as most clock dials do. Persian numerals use the Persian digits ۱ to ۱۲. On the classic face, a second time zone replaces the 6 with a small dial, as on a watch.
+
+`hands="lollipop"` swaps the slim original hands for tapered batons, a pivot cap with a dark pin, and a fine seconds hand that ends in a round dot. Both designs take their colour from `--bezel-hand` (hour and minute hands) and `--bezel-accent` (seconds hand).
 
 `numerals` sets four huge overlapping numerals behind the hands. `relief` presses the numerals into the surface; the ones near the minute hand rise up as it passes. `classic` is a clean railway dial.
 
@@ -107,6 +115,7 @@ A dashboard: date, analog clock, agenda and weather in one tile.
 | `ics`          | URL of an `.ics` feed                          |         |
 | `max-events`   | number                                         | `3`     |
 | `hide-weather` | boolean, shows the week number instead         | off     |
+| `hands`        | `modern`, `lollipop`, as on `<bezel-clock>`    | `modern` |
 | plus `location`, `latitude`, `longitude`, `units`, `refresh` from `<bezel-weather>` | | |
 
 Without an events source, the lower-left corner shows the week number and how far through the year you are. Events that have finished drop off as the day goes on.
@@ -134,8 +143,12 @@ Every tile accepts these:
 | `timezone`   | any IANA zone, e.g. `America/New_York`   | the viewer's device         |
 | `locale`     | a language tag, e.g. `fr-FR`             | the viewer's browser        |
 | `hour-cycle` | `12`, `24`                               | from `locale`               |
+| `night-theme` | a theme to switch to at night           | off                         |
+| `night-hours` | the night window, e.g. `21-6`           | `19-7`                      |
 
-`device` draws an aluminium rim, glass bezel and camera dot. `bezel` keeps just the black border. `none` is the bare screen, for when the tile sits inside your own design.
+Night hours use the tile's own time zone, so a desk clock dims itself in the evening without any script.
+
+`device` draws a thin black bezel of even width with a camera dot and a soft shadow. `bezel` keeps just the black border. `none` is the bare screen, for when the tile sits inside your own design.
 
 ## Theming
 
@@ -155,17 +168,25 @@ bezel-clock.brand {
 | `--bezel-size`     | width of the tile (height follows)                    |
 | `--bezel-aspect`   | aspect ratio, e.g. `16 / 9`                           |
 | `--bezel-radius`   | outer corner radius, in `cqw` units (`22cqw` default) |
+| `--bezel-thickness`| width of the black bezel (`1.7cqw` default)           |
 | `--bezel-font`     | font stack for every tile                             |
 | `--bezel-surface`  | screen background                                     |
 | `--bezel-ink`      | text and numerals                                     |
 | `--bezel-accent`   | highlights, second hand, today                        |
-| `--bezel-hand`     | clock hands                                           |
+| `--bezel-hand`     | clock hands, on the clock and the glance dial          |
 | `--bezel-today`, `--bezel-muted` | calendar today circle and other-month days |
 | `--bezel-soft`     | glance clock plate                                    |
 | `--bezel-rule`     | poster column rules                                   |
+| `--bezel-tint`     | weather sky tint; recolours the sky but keeps the clouds and light |
 | `--bezel-numeral-weight` | weight of the big numerals on the numerals face |
 
-The library doesn't download fonts. By default it uses the system font, which is SF Pro on Apple devices. To use another face, load it on your page and set `--bezel-font`.
+The library doesn't download fonts. On Apple devices it uses SF Pro, the system font. Elsewhere it uses [Geist](https://fonts.google.com/specimen/Geist) if your page loads it, which gives Windows and Android the same clean look:
+
+```html
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap">
+```
+
+To use any other face, load it and set `--bezel-font`.
 
 For deeper changes, the frame is exposed as CSS parts: `bezel-clock::part(screen)`, `::part(bezel)` and `::part(frame)`.
 
