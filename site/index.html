@@ -22,7 +22,6 @@
   <div class="bar__in">
     <a class="mark" href="#top" aria-label="Bezel home"><svg class="mark__glyph" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="mark__outer" x="1.5" y="1.5" width="29" height="29" rx="9"/><rect class="mark__inner" x="6.5" y="6.5" width="19" height="19" rx="4.4"/><path class="mark__b" d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3"/></svg>Bezel</a>
     <nav class="bar__nav" aria-label="Sections">
-      <a href="#examples">Examples</a>
       <a href="#studio">Studio</a>
       <a href="#install">Get the code</a>
       <a class="bar__gh" href="https://github.com/ShazMoghaddam/bezel">GitHub</a>
@@ -33,46 +32,43 @@
 <main id="top">
   <section class="hero" aria-labelledby="hero-h">
     <div class="hero__copy">
-      <div class="hero__intro">
-        <p class="eyebrow">Open-source web components · v1.0</p>
-        <h1 id="hero-h">Clocks, calendars and weather, sharp on every screen.</h1>
-      </div>
-      <div class="hero__aside">
-        <p class="lede">Seven tile faces drawn entirely in vectors, so they stay crisp from a 120&nbsp;px widget to a 4K desk display. Restyle every colour, frame and font, then drop one line of HTML into any site, an old iPad, or your Mac desktop.</p>
-        <div class="hero__cta">
-          <a class="btn btn--solid" href="#studio">Open the studio</a>
-          <a class="btn" href="https://github.com/ShazMoghaddam/bezel">View on GitHub</a>
-        </div>
-        <dl class="specs">
-          <div><dt>Dependencies</dt><dd>0</dd></div>
-          <div><dt>Gzipped</dt><dd data-size>21 kB</dd></div>
-          <div><dt>Weather API key</dt><dd>None needed</dd></div>
-        </dl>
+      <h1 id="hero-h">Clocks, calendars and weather, sharp on every screen.</h1>
+      <div class="hero__cta">
+        <a class="btn btn--solid" href="#studio">Open the studio</a>
+        <a class="btn" href="https://github.com/ShazMoghaddam/bezel">View on GitHub</a>
       </div>
     </div>
 
     <!-- The examples are the real elements with real attributes. Selecting one copies those attributes into the Studio. -->
     <div class="showcase" id="examples" aria-label="Live examples" data-showcase>
-      <button type="button" class="show show--calendar" data-show="calendar" aria-label="Customise the calendar in the Studio">
-        <bezel-calendar theme="snow" aria-hidden="true"></bezel-calendar>
-        <span class="show__label"><b>Calendar</b><span>The whole month</span></span>
-      </button>
-      <button type="button" class="show" data-show="clock" aria-label="Customise the numerals clock in the Studio">
-        <bezel-clock variant="numerals" theme="sage" aria-hidden="true"></bezel-clock>
-        <span class="show__label"><b>Clock</b><span>Numerals</span></span>
-      </button>
-      <button type="button" class="show" data-show="weather" aria-label="Customise the weather tile in the Studio">
-        <bezel-weather location="London" aria-hidden="true"></bezel-weather>
-        <span class="show__label"><b>Weather</b><span>Live sky</span></span>
-      </button>
-      <button type="button" class="show" data-show="glance" aria-label="Customise the glance tile in the Studio">
-        <bezel-glance theme="orchid" location="London" aria-hidden="true"></bezel-glance>
-        <span class="show__label"><b>Glance</b><span>Clock, date, weather</span></span>
-      </button>
-      <button type="button" class="show" data-show="clock" aria-label="Customise the classic clock in the Studio">
-        <bezel-clock variant="classic" theme="midnight" hands="lollipop" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
-        <span class="show__label"><b>Classic</b><span>Two time zones</span></span>
-      </button>
+      <div class="showcase__row showcase__row--large">
+        <button type="button" class="show" data-show="calendar" aria-label="Customise the calendar in the Studio">
+          <bezel-calendar theme="snow" aria-hidden="true"></bezel-calendar>
+          <span class="show__label"><b>Calendar</b><span>The whole month</span></span>
+        </button>
+        <button type="button" class="show" data-show="poster" aria-label="Customise the poster calendar in the Studio">
+          <bezel-poster theme="noir" aria-hidden="true"></bezel-poster>
+          <span class="show__label"><b>Poster</b><span>A month, set large</span></span>
+        </button>
+      </div>
+      <div class="showcase__row">
+        <button type="button" class="show" data-show="clock" aria-label="Customise the numerals clock in the Studio">
+          <bezel-clock variant="numerals" theme="sage" aria-hidden="true"></bezel-clock>
+          <span class="show__label"><b>Clock</b><span>Numerals</span></span>
+        </button>
+        <button type="button" class="show" data-show="weather" aria-label="Customise the weather tile in the Studio">
+          <bezel-weather location="London" aria-hidden="true"></bezel-weather>
+          <span class="show__label"><b>Weather</b><span>Live sky</span></span>
+        </button>
+        <button type="button" class="show" data-show="glance" aria-label="Customise the glance tile in the Studio">
+          <bezel-glance theme="orchid" location="London" aria-hidden="true"></bezel-glance>
+          <span class="show__label"><b>Glance</b><span>Clock, date, weather</span></span>
+        </button>
+        <button type="button" class="show" data-show="clock" aria-label="Customise the classic clock in the Studio">
+          <bezel-clock variant="classic" theme="midnight" hands="lollipop" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
+          <span class="show__label"><b>Classic</b><span>Two time zones</span></span>
+        </button>
+      </div>
     </div>
     <p class="showcase__hint">Every example is live. Select one to customise it in the Studio.</p>
   </section>
@@ -109,17 +105,16 @@
   <section class="section install" id="install" aria-labelledby="install-h">
     <div class="section__head">
       <h2 id="install-h">Get the code</h2>
-      <p>Copy the HTML for the tile you made, or choose where it should live. Select a card to see the details.</p>
+      <p>Choose where your tile will live.</p>
     </div>
     <div class="ways" data-ways>
-      <button type="button" class="way" id="way-html-b" data-way="html" aria-expanded="true" aria-controls="way-html">
+      <button type="button" class="way" id="way-html-b" data-way="html" aria-expanded="false" aria-controls="way-html">
         <span class="way__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/></svg></span>
-        <span class="way__k">HTML</span>
-        <span class="way__t">Your tile's code</span>
-        <span class="way__s">The exact markup for the tile in the Studio.</span>
-        <span class="way__more"><span data-open-label>Hide details</span><i aria-hidden="true"></i></span>
+        <span class="way__t">HTML</span>
+        <span class="way__s">Your tile's code, ready to paste.</span>
+        <i class="way__chev" aria-hidden="true"></i>
       </button>
-      <div class="way__panel" id="way-html" role="region" aria-labelledby="way-html-b" data-way-panel="html">
+      <div class="way__panel" id="way-html" role="region" aria-labelledby="way-html-b" data-way-panel="html" hidden>
         <div class="way__desc">
           <p>Paste this where the tile should appear. It follows every change you make in the Studio, including colours, hands and size. Load the script once per page, however many tiles you use.</p>
           <div class="way__actions">
@@ -132,10 +127,9 @@
 
       <button type="button" class="way" id="way-web-b" data-way="web" aria-expanded="false" aria-controls="way-web">
         <span class="way__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18M6.5 6.8h.01M9 6.8h.01"/></svg></span>
-        <span class="way__k">Website or app</span>
-        <span class="way__t">One script tag</span>
-        <span class="way__s">Plain HTML, React, Vue, Svelte and more.</span>
-        <span class="way__more"><span data-open-label>Show details</span><i aria-hidden="true"></i></span>
+        <span class="way__t">Website or app</span>
+        <span class="way__s">One script tag, any framework.</span>
+        <i class="way__chev" aria-hidden="true"></i>
       </button>
       <div class="way__panel" id="way-web" role="region" aria-labelledby="way-web-b" data-way-panel="web" hidden>
         <div class="way__desc">
@@ -160,10 +154,9 @@ import 'bezel-tiles';</code></pre>
 
       <button type="button" class="way" id="way-desk-b" data-way="desk" aria-expanded="false" aria-controls="way-desk">
         <span class="way__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M10.5 18h3"/></svg></span>
-        <span class="way__k">Desk display</span>
-        <span class="way__t">Any spare screen</span>
-        <span class="way__s">Turn an old iPad, phone or monitor into a clock.</span>
-        <span class="way__more"><span data-open-label>Show details</span><i aria-hidden="true"></i></span>
+        <span class="way__t">Desk display</span>
+        <span class="way__s">Full screen on a spare iPad or monitor.</span>
+        <i class="way__chev" aria-hidden="true"></i>
       </button>
       <div class="way__panel" id="way-desk" role="region" aria-labelledby="way-desk-b" data-way-panel="desk" hidden>
         <div class="way__desc">
@@ -178,10 +171,9 @@ import 'bezel-tiles';</code></pre>
 
       <button type="button" class="way" id="way-mac-b" data-way="mac" aria-expanded="false" aria-controls="way-mac">
         <span class="way__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M9 20h6M12 16.5V20"/></svg></span>
-        <span class="way__k">macOS desktop</span>
-        <span class="way__t">Übersicht widget</span>
-        <span class="way__s">Tiles on your Mac desktop, calendar feeds included.</span>
-        <span class="way__more"><span data-open-label>Show details</span><i aria-hidden="true"></i></span>
+        <span class="way__t">macOS desktop</span>
+        <span class="way__s">Tiles on your desktop with Übersicht.</span>
+        <i class="way__chev" aria-hidden="true"></i>
       </button>
       <div class="way__panel" id="way-mac" role="region" aria-labelledby="way-mac-b" data-way-panel="mac" hidden>
         <div class="way__desc">
@@ -204,8 +196,43 @@ import 'bezel-tiles';</code></pre>
 
 <footer class="foot">
   <div class="foot__in">
-    <span>Created by <a href="https://shazmoghaddam.github.io">Shaz Moghaddam</a>, London</span>
-    <span class="foot__meta"><a href="https://github.com/ShazMoghaddam/bezel/blob/main/LICENSE">MIT licence</a> · Weather by <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0)</span>
+    <div class="foot__about">
+      <a class="mark" href="#top" aria-label="Back to the top"><svg class="mark__glyph" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="mark__outer" x="1.5" y="1.5" width="29" height="29" rx="9"/><rect class="mark__inner" x="6.5" y="6.5" width="19" height="19" rx="4.4"/><path class="mark__b" d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3"/></svg>Bezel</a>
+      <p class="foot__eyebrow">Open-source web components · v1.0</p>
+      <p class="foot__lede">Seven tile faces drawn entirely in vectors, so they stay crisp from a 120&nbsp;px widget to a 4K desk display. Restyle every colour, frame and font, then drop one line of HTML into any site, an old iPad, or your Mac desktop.</p>
+    </div>
+
+    <dl class="foot__specs">
+      <div><dt>Dependencies</dt><dd>0</dd></div>
+      <div><dt>Gzipped</dt><dd>21 kB</dd></div>
+      <div><dt>Weather API key</dt><dd>None needed</dd></div>
+    </dl>
+
+    <nav class="foot__links" aria-label="Footer">
+      <h2 class="foot__h">Project</h2>
+      <ul>
+        <li><a href="#studio">Studio</a></li>
+        <li><a href="#install">Get the code</a></li>
+        <li><a href="https://github.com/ShazMoghaddam/bezel">GitHub</a></li>
+        <li><a href="https://github.com/ShazMoghaddam/bezel#readme">Documentation</a></li>
+      </ul>
+    </nav>
+
+    <div class="foot__links">
+      <h2 class="foot__h">Credits</h2>
+      <ul>
+        <li>Weather by <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0)</li>
+        <li>Fonts: <a href="https://fonts.google.com/specimen/Geist">Geist</a> (OFL)</li>
+        <li><a href="https://github.com/ShazMoghaddam/bezel/blob/main/LICENSE">MIT licence</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot__bar">
+    <div class="foot__bar-in">
+      <p>Designed by <a href="https://shazmoghaddam.github.io">Shaz Moghaddam</a>, London</p>
+      <p class="foot__copy">© 2026 · Free to use under the MIT licence</p>
+    </div>
   </div>
 </footer>
 

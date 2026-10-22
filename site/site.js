@@ -728,7 +728,6 @@ function openWay(name, scroll = false) {
     const open = card.dataset.way === name;
     card.setAttribute('aria-expanded', String(open));
     $(`[data-way-panel="${card.dataset.way}"]`).hidden = !open;
-    $('[data-open-label]', card).textContent = open ? 'Hide details' : 'Show details';
   }
   if (scroll) $('#install').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
@@ -737,7 +736,6 @@ function closeWays() {
   for (const card of $$('[data-way]')) {
     card.setAttribute('aria-expanded', 'false');
     $(`[data-way-panel="${card.dataset.way}"]`).hidden = true;
-    $('[data-open-label]', card).textContent = 'Show details';
   }
 }
 
