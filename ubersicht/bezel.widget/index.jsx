@@ -6,6 +6,8 @@
 // 3. Edit TILES below. Übersicht reloads the widget when you save.
 //
 // Each tile takes the same attributes as on the web; see the README for the full list.
+// An optional `style` object sets the CSS variables the studio uses, without the
+// --bezel- prefix, e.g. style: { hand: '#E6E1D8', accent: '#66F05A', radius: 18 }.
 
 import { run } from 'uebersicht';
 
@@ -56,6 +58,13 @@ function ensureLibrary() {
   document.head.appendChild(s);
 }
 
+function cssVars(style = {}) {
+  return Object.entries(style)
+    .filter(([k, v]) => /^[a-z-]+$/.test(k) && v !== '' && v != null)
+    .map(([k, v]) => `;--bezel-${k}:${k === 'radius' ? `${parseFloat(v)}cqw` : String(v).replace(/[";]/g, '')}`)
+    .join('');
+}
+
 function attributes(attrs) {
   return Object.entries(attrs)
     .filter(([, v]) => v !== false && v != null)
@@ -90,7 +99,7 @@ export const init = () => {
 export const render = () => {
   const html = TILES.map(
     (t, i) =>
-      `<${t.tag} data-bezel-tile="${i}" ${attributes(t.attrs)} style="position:absolute;top:${t.top}px;left:${t.left}px;--bezel-size:${t.size}px"></${t.tag}>`,
+      `<${t.tag} data-bezel-tile="${i}" ${attributes(t.attrs)} style="position:absolute;top:${t.top}px;left:${t.left}px;--bezel-size:${t.size}px${cssVars(t.style)}"></${t.tag}>`,
   ).join('');
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 };

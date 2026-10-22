@@ -47,7 +47,7 @@ class BezelCalendar extends BezelElement {
       padding-block-start: 12cqh;
       font-size: var(--bd-size, 82cqh); line-height: 1; font-weight: 760; letter-spacing: -0.07em;
       color: var(--_accent);
-      opacity: var(--bd-opacity, .9);
+      opacity: var(--bd-opacity, .2);
       font-variant-numeric: lining-nums;
       -webkit-mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
               mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
@@ -87,7 +87,7 @@ class BezelCalendar extends BezelElement {
     );
 
     return `
-      ${this.flag('hide-backdrop') || !isCurrent ? '' : `<div class="backdrop" aria-hidden="true"${z.day > 9 ? ' style="--bd-size:60cqw;--bd-opacity:.78"' : ''}>${z.day}</div>`}
+      ${this.flag('hide-backdrop') || !isCurrent ? '' : `<div class="backdrop" aria-hidden="true"${z.day > 9 ? ' style="--bd-size:66cqw;--bd-opacity:.16"' : ''}>${z.day}</div>`}
       <div class="cal" aria-hidden="true">
         <div class="head"><span>${esc(monthLabel)}</span>${this.flag('hide-time') ? '' : '<span class="time"></span>'}</div>
         <div class="row">${dows}</div>

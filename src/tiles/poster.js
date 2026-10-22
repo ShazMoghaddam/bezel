@@ -28,10 +28,10 @@ class BezelPoster extends BezelElement {
   static styles = /* css */ `
     :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); }
     .frame--none .screen { border-radius: var(--_rim-r); }
-    .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; padding: 4.2cqw 2.4cqw 2cqw; }
+    .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4.2cqw 2.4cqw 2.4cqw; overflow: hidden; }
     .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }
-    .cols { display: grid; grid-template-columns: repeat(7, 1fr); min-block-size: 0; }
-    .col { display: grid; grid-template-rows: repeat(var(--rows), 1fr); border-inline-start: max(1px, 0.14cqw) solid var(--_rule); padding-inline-start: 0.5cqw; min-inline-size: 0; }
+    .cols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-block-size: 0; container-type: size; }
+    .col { display: grid; grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); border-inline-start: max(1px, 0.14cqw) solid var(--_rule); padding-inline-start: 0.5cqw; min-inline-size: 0; }
     .col:first-child { border-inline-start-color: transparent; }
     .c { font-size: var(--fs); font-weight: 700; line-height: .84; letter-spacing: -0.05em; align-self: end; white-space: nowrap;
          font-variant-numeric: lining-nums proportional-nums; font-feature-settings: "lnum" 1, "pnum" 1; }
@@ -54,7 +54,9 @@ class BezelPoster extends BezelElement {
     const highlight = !this.flag('no-highlight') && year === z.year && month === z.month;
 
     // Size digits by whichever runs out first: row height or column width.
-    const fs = `min(calc((100cqh - 15cqh) / ${rows} * 1.14), 11cqw)`;
+    // The columns box is its own size container, so these units are measured
+    // after the title and padding, and the last week can never be cut off.
+    const fs = `min(calc(100cqh / ${rows} * 1.08), 12cqw)`;
 
     const cols = weekdayOrder(weekStart)
       .map((dow, ci) => {

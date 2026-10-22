@@ -130,3 +130,86 @@ test('invalid events JSON does not throw', async () => {
   assert.ok(el.shadowRoot.querySelector('.agenda'));
   el.remove();
 });
+
+test('clock numerals: Roman uses IIII, Persian uses Persian digits', async () => {
+  const roman = mount('<bezel-clock variant="classic" numerals="roman"></bezel-clock>');
+  await flush();
+  const texts = [...roman.shadowRoot.querySelectorAll('.numeral')].map((n) => n.textContent);
+  assert.ok(texts.includes('IIII') && texts.includes('XII'));
+  roman.remove();
+  const fa = mount('<bezel-clock variant="numerals" numerals="persian"></bezel-clock>');
+  await flush();
+  assert.equal(fa.shadowRoot.querySelector('.numeral').textContent, '۱۲');
+  fa.remove();
+});
+
+test('classic clock shows a second time zone dial in place of the 6', async () => {
+  const el = mount('<bezel-clock variant="classic" second-timezone="Asia/Tokyo" timezone="Europe/London"></bezel-clock>');
+  await flush();
+  assert.equal(el.shadowRoot.querySelector('.city').textContent, 'TOKYO');
+  const nums = [...el.shadowRoot.querySelectorAll('.numeral')].map((n) => n.textContent);
+  assert.ok(!nums.includes('6'));
+  assert.match(el.getAttribute('aria-label'), /in Tokyo/);
+  el.remove();
+});
+
+test('night-theme applies during night hours', async () => {
+  const el = mount('<bezel-clock theme="porcelain" night-theme="midnight" night-hours="0-24"></bezel-clock>');
+  await flush();
+  assert.equal(el.themeName, 'midnight');
+  el.setAttribute('night-hours', '0-0');
+  await flush();
+  assert.equal(el.themeName, 'porcelain');
+  el.remove();
+});
+
+test('clock hands: lollipop design keeps time, colours and seconds settings', async () => {
+  const el = mount('<bezel-clock variant="classic" timezone="Europe/London"></bezel-clock>');
+  await flush();
+  // The original design is still the default.
+  assert.equal(el.shadowRoot.querySelector('.lp'), null);
+  assert.ok(el.shadowRoot.querySelector('.hub'));
+  el.setAttribute('hands', 'lollipop');
+  el.setAttribute('theme', 'midnight');
+  await flush();
+  const root = el.shadowRoot;
+  for (const cls of ['.hour', '.minute', '.second']) {
+    assert.match(root.querySelector(cls).getAttribute('transform'), /^rotate\(/, cls);
+  }
+  assert.ok(root.querySelector('.second circle'), 'seconds hand ends in a dot');
+  assert.ok(root.querySelector('.lp-pivot') && root.querySelector('.lp-pin'));
+  // Theme is untouched by the switch, and the hands read the shared --_hand variable.
+  assert.equal(el.themeName, 'midnight');
+  assert.match(root.querySelector('style').textContent, /\.lp-arm, \.lp-pivot \{ fill: var\(--_hand\)/);
+  el.setAttribute('hide-seconds', '');
+  await flush();
+  assert.equal(root.querySelector('.second'), null);
+  assert.ok(root.querySelector('.lp-pivot'));
+  el.setAttribute('hands', 'nonsense');
+  await flush();
+  assert.equal(root.querySelector('.lp'), null, 'unknown values fall back to the original hands');
+  el.remove();
+});
+
+test('glance mini dial supports both hand designs and a hand colour', async () => {
+  const el = mount('<bezel-glance hide-weather hands="lollipop"></bezel-glance>');
+  await flush();
+  const root = el.shadowRoot;
+  assert.ok(root.querySelector('.hr.lp') && root.querySelector('.mn.lp') && root.querySelector('.sc.lp-sec'));
+  assert.match(root.querySelector('.hr').getAttribute('transform'), /^rotate\(/);
+  assert.match(root.querySelector('style').textContent, /--_hand: var\(--bezel-hand, #0F1316\)/);
+  el.removeAttribute('hands');
+  await flush();
+  assert.ok(root.querySelector('.hr.h'));
+  el.remove();
+});
+
+test('device frame has no light rim outside the black bezel', async () => {
+  const el = mount('<bezel-clock></bezel-clock>');
+  await flush();
+  const css = el.shadowRoot.querySelector('style').textContent;
+  const device = /\.frame--device \{([^}]*)\}/.exec(css)[1];
+  assert.doesNotMatch(device, /padding|background|inset/);
+  assert.match(css, /--_rim-pad: 0px/);
+  el.remove();
+});

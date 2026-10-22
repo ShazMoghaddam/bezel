@@ -68,6 +68,13 @@ class BezelWeather extends BezelElement {
 
   static styles = /* css */ `
     .sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, var(--s0) 0%, var(--s1) 55%, var(--s2) 100%); }
+    .tint { position: absolute; inset: 0; z-index: 1; background: var(--bezel-tint, transparent); mix-blend-mode: color; }
+    .shim { display: block; border-radius: 1cqw; background: linear-gradient(100deg, rgba(255,255,255,.14) 30%, rgba(255,255,255,.38) 50%, rgba(255,255,255,.14) 70%) 0 0 / 300% 100%; animation: shimmer 1.6s ease-in-out infinite; }
+    .shim.t { inline-size: 46cqw; block-size: 30cqw; border-radius: 3cqw; }
+    .shim.l { inline-size: 26cqw; block-size: 3.6cqw; }
+    .shim.s { inline-size: 12cqw; block-size: 3.6cqw; }
+    .stat .shim.i { inline-size: 6.4cqw; block-size: 6.4cqw; border-radius: 50%; }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .sky::after { content: ""; position: absolute; inset: 0; z-index: 2;
       background: linear-gradient(180deg, rgba(8,20,40,.30) 0%, rgba(8,20,40,.08) 30%, rgba(8,20,40,0) 52%, rgba(8,20,40,0) 70%, rgba(8,20,40,.18) 100%); }
     .sun { position: absolute; inset-block-start: -22cqh; inset-inline-end: -18cqw; inline-size: 80cqw; aspect-ratio: 1; border-radius: 50%;
@@ -134,7 +141,7 @@ class BezelWeather extends BezelElement {
     .stat b { font-size: 4.4cqw; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .stat b small { font-size: .72em; font-weight: 600; opacity: .85; margin-inline-start: .3em; }
     .stat span { font-size: 3.5cqw; font-weight: 550; opacity: .82; }
-    .loading .temp, .loading .stats { opacity: .35; }
+    .loading .temp { align-self: center; }
   `;
 
   #source = new WeatherSource(this);
@@ -180,10 +187,11 @@ class BezelWeather extends BezelElement {
     if (sky === 'rain' || sky === 'storm') layers.push('<i class="rain"></i>');
     if (sky === 'snow') layers.push('<i class="snowfall"></i>');
     if (sky === 'storm') layers.push('<i class="flash"></i>');
+    layers.push('<i class="tint"></i>');
 
     const deg = (v) => (v == null || Number.isNaN(v) ? '--' : `${Math.round(v)}°`);
     const place = w?.place || this.getAttribute('location') || '';
-    let stats = '';
+    let stats = Array.from({ length: 4 }, () => '<div class="stat"><span class="shim i"></span><span class="shim s"></span></div>').join('');
     if (w) {
       const sun = nextSunEvent(w);
       const windUnit = w.units === 'imperial' ? 'mph' : 'km/h';
@@ -199,13 +207,14 @@ class BezelWeather extends BezelElement {
       <div class="content${w ? '' : ' loading'}" aria-hidden="true">
         <div class="top">
           <div class="meta">
-            <div class="place">${esc(place)}${w?.sample ? '<span class="sample">Sample</span>' : ''}</div>
-            <div class="cond">${skyIcon(sky, isDay)}<span>${esc(w ? w.condition : 'Loading')}</span></div>
-            <div class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</div>
+            <div class="place">${esc(place || (w ? '' : 'Weather'))}${w?.sample ? '<span class="sample">Sample</span>' : ''}</div>
+            ${w
+              ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(w.condition)}</span></div><div class="hl">H:${deg(w.high)} L:${deg(w.low)}</div>`
+              : '<span class="shim l"></span><span class="shim s"></span>'}
           </div>
           ${this.flag('hide-time') ? '' : '<div class="time"></div>'}
         </div>
-        <div class="temp">${deg(w?.temperature)}</div>
+        <div class="temp">${w ? deg(w.temperature) : '<span class="shim t"></span>'}</div>
         <div class="stats">${stats}</div>
       </div>`;
   }
