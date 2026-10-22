@@ -24,7 +24,7 @@
     <nav class="bar__nav" aria-label="Sections">
       <a href="#studio">Studio</a>
       <a href="#install">Get the code</a>
-      <a class="bar__gh" href="https://github.com/ShazMoghaddam/bezel">GitHub</a>
+      <a href="https://github.com/ShazMoghaddam/bezel">GitHub</a>
     </nav>
   </div>
 </header>
@@ -33,10 +33,6 @@
   <section class="hero" aria-labelledby="hero-h">
     <div class="hero__copy">
       <h1 id="hero-h">Clocks, calendars and weather, sharp on every screen.</h1>
-      <div class="hero__cta">
-        <a class="btn btn--solid" href="#studio">Open the studio</a>
-        <a class="btn" href="https://github.com/ShazMoghaddam/bezel">View on GitHub</a>
-      </div>
     </div>
 
     <!-- The examples are the real elements with real attributes. Selecting one copies those attributes into the Studio. -->
@@ -70,18 +66,15 @@
         </button>
       </div>
     </div>
-    <p class="showcase__hint">Every example is live. Select one to customise it in the Studio.</p>
   </section>
 
   <section class="section studio" id="studio" aria-labelledby="studio-h">
-    <div class="section__head">
-      <h2 id="studio-h">Studio</h2>
-      <p>Pick a component, adjust it on the right and watch the preview change. When you're happy, copy the code below.</p>
-    </div>
-
-    <div class="studio__pick">
-      <span class="studio__step" id="tabs-l">Component</span>
-      <div class="tabs" role="tablist" aria-labelledby="tabs-l" data-tabs></div>
+    <div class="studio__head">
+      <div>
+        <h2 id="studio-h">Studio</h2>
+        <p class="studio__sub">Make it yours, then copy the code.</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Component" data-tabs></div>
     </div>
 
     <div class="studio__body">

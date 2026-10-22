@@ -2,7 +2,7 @@
 // The tiles themselves come from the library; this file only drives the page.
 
 const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.0.0/dist/bezel.min.js';
-const STORE_KEY = 'bezel-studio-v2';
+const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 const FONTS = [
   ['', 'Default'],
@@ -50,20 +50,20 @@ const time = [
   { type: 'seg', key: 'hour-cycle', label: 'Hours', options: [['', 'Auto'], ['12', '12 h'], ['24', '24 h']] },
   { type: 'select', key: 'locale', label: 'Language', options: LOCALES },
 ];
-const place = [
-  { type: 'place', key: 'location', label: 'Location' },
-  { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']] },
-];
+const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
+const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']] };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
 
 /*
- * Each component lists its controls by Studio section:
- *   look      extra Appearance controls, under the theme
- *   colors    the colour pickers shown under Colours (hand colour lives under Clock hands)
- *   hands     true when the tile has an analog dial; `handControls` adds to that section
- *   content   an optional [title, controls] section for what the tile shows
- *   display   extra Layout and display controls, under frame and size
- *   time      the Time and language controls
+ * The Studio shows one group of settings at a time (Style, Colours, Hands, Options, Time),
+ * so the panel stays short enough to sit beside the preview. Each component lists
+ * only the settings that make sense for it:
+ *   style     face controls shown above typeface, frame and size
+ *   corners   false when a corner radius doesn't suit the tile (the poster)
+ *   colors    the colour pickers; tiles with hands also get a Hands colour
+ *   hands     true when the tile has an analog dial
+ *   options   what the tile shows
+ *   time      time zone, hours and language
  */
 const TYPES = {
   clock: {
@@ -72,8 +72,7 @@ const TYPES = {
     size: 380,
     attrs: { variant: 'numerals', theme: 'sage' },
     colors: ['surface', 'ink', 'accent'],
-    colorLabels: { accent: 'Accent' },
-    look: [
+    style: [
       { type: 'seg', key: 'variant', label: 'Face', options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic']] },
       { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']] },
     ],
@@ -82,7 +81,7 @@ const TYPES = {
       { type: 'toggle', key: 'hide-seconds', label: 'Seconds hand', invert: true },
       { type: 'seg', key: 'sweep', label: 'Seconds motion', options: [['', 'Smooth sweep'], ['tick', 'Tick']] },
     ],
-    display: [
+    options: [
       { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, hint: 'Shown on the Numerals and Classic faces.' },
       { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'None'], ...ZONES.slice(1)], hint: 'Adds a small dial for another city on the Classic face.' },
     ],
@@ -95,7 +94,7 @@ const TYPES = {
     attrs: { theme: 'snow' },
     colors: ['surface', 'ink', 'accent', 'today', 'muted'],
     colorLabels: { accent: 'Month and backdrop' },
-    display: [
+    options: [
       weekStart,
       { type: 'toggle', key: 'hide-time', label: 'Time in the header', invert: true },
       { type: 'toggle', key: 'hide-backdrop', label: 'Giant day numeral', invert: true },
@@ -108,8 +107,13 @@ const TYPES = {
     size: 380,
     attrs: { location: 'London' },
     colors: ['ink', 'tint'],
-    content: ['Forecast', [...place, { type: 'toggle', key: 'still', label: 'Animated sky', invert: true }]],
-    display: [{ type: 'toggle', key: 'hide-time', label: 'Clock in the corner', invert: true }],
+    colorHint: 'The sky follows the live weather. A tint recolours it while keeping the clouds and light.',
+    options: [
+      locationField,
+      units,
+      { type: 'toggle', key: 'still', label: 'Animated sky', invert: true },
+      { type: 'toggle', key: 'hide-time', label: 'Clock in the corner', invert: true },
+    ],
     time,
   },
   glance: {
@@ -118,15 +122,16 @@ const TYPES = {
     size: 400,
     attrs: { theme: 'mist', location: 'London' },
     colors: ['surface', 'ink', 'accent', 'soft'],
-    colorLabels: { accent: 'Accent' },
-    sample: false,
     hands: true,
-    content: ['Content', [
+    options: [
       { type: 'toggle', key: 'hide-weather', label: 'Weather corner', invert: true },
-      { type: 'sample', label: 'Sample agenda', hint: 'Without events, the lower left shows how far through the year you are. Use the events attribute or an ics feed for real ones.' },
-      ...place,
-    ]],
-    display: [],
+      locationField,
+      units,
+      {
+        type: 'text', key: 'ics', label: 'Calendar link (optional)', placeholder: 'https://… .ics', inputmode: 'url',
+        hint: "Paste your calendar's iCal (.ics) address to list today's events. On the Mac desktop any feed works. In a browser, Google and iCloud feeds are usually blocked, and the corner then shows how far through the year you are.",
+      },
+    ],
     time,
   },
   poster: {
@@ -134,17 +139,25 @@ const TYPES = {
     label: 'Poster',
     size: 560,
     attrs: { theme: 'noir' },
+    corners: false,
     colors: ['surface', 'ink', 'accent'],
     colorLabels: { accent: 'Today' },
-    content: ['Month', [
+    options: [
       { type: 'month', key: 'month', label: 'Month', hint: 'Leave empty to follow the current month.' },
       weekStart,
       { type: 'toggle', key: 'no-highlight', label: 'Highlight today', invert: true },
-    ]],
-    display: [],
+    ],
     time: time.slice(0, 1).concat(time.slice(2)),
   },
 };
+
+const GROUPS = [
+  ['style', 'Style'],
+  ['colours', 'Colours'],
+  ['hands', 'Hands'],
+  ['options', 'Options'],
+  ['time', 'Time'],
+];
 
 // ---------------------------------------------------------------------------
 
@@ -155,7 +168,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 function freshState() {
   const s = { current: 'clock', bg: 'desk', tiles: {} };
   for (const [k, t] of Object.entries(TYPES)) {
-    s.tiles[k] = { attrs: { frame: k === 'poster' ? 'none' : 'device', ...t.attrs }, vars: {}, size: t.size, sample: Boolean(t.sample) };
+    s.tiles[k] = { attrs: { frame: k === 'poster' ? 'none' : 'device', ...t.attrs }, vars: {}, size: t.size };
   }
   return s;
 }
@@ -180,28 +193,9 @@ const save = () => {
   } catch {}
 };
 
-function sampleEvents() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  // Local wall-clock time with the UTC offset, so the events land where they should in any time zone.
-  const at = (h, m) => {
-    const t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
-    const off = -t.getTimezoneOffset();
-    const sign = off >= 0 ? '+' : '-';
-    return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(h)}:${pad(m)}${sign}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`;
-  };
-  const later = Math.min(22, d.getHours() + 1);
-  return [
-    { title: 'Product review', start: at(later, 0), end: at(later + 1, 30) },
-    { title: 'Design sync', start: at(Math.min(23, later + 2), 0), end: at(Math.min(23, later + 2), 45) },
-    { title: 'Dinner with Jennie', start: at(23, 0), end: at(23, 55) },
-  ];
-}
-
 /** Applies a tile config to an element, adding and removing attributes as needed. */
 function applyTo(el, cfg, type) {
   const attrs = { ...cfg.attrs };
-  if (type === 'glance' && cfg.sample) attrs.events = JSON.stringify(sampleEvents());
   for (const a of [...el.attributes]) {
     if (['class', 'style', 'role', 'aria-label', 'aria-hidden', 'data-bezel-label'].includes(a.name)) continue;
     if (!(a.name in attrs)) el.removeAttribute(a.name);
@@ -235,7 +229,7 @@ function openExample(button) {
   const attrs = {};
   for (const a of tile.attributes) if (!SKIP_ATTRS.has(a.name)) attrs[a.name] = a.value === '' ? true : a.value;
   state.current = type;
-  state.tiles[type] = { attrs: { frame: type === 'poster' ? 'none' : 'device', ...attrs }, vars: {}, size: TYPES[type].size, sample: false };
+  state.tiles[type] = { attrs: { frame: type === 'poster' ? 'none' : 'device', ...attrs }, vars: {}, size: TYPES[type].size };
   renderStudio(true);
   $('#studio').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   note(`${button.querySelector('.show__label b').textContent} example loaded. Every change below shows in the preview straight away.`);
@@ -263,6 +257,7 @@ function themesFor(type) {
   return customElements.get(TYPES[type].tag)?.themes ?? {};
 }
 
+/** The built-in palette behind a tile. The Studio no longer offers themes; it only supplies the default colours. */
 function effectiveThemeName(type, cfg) {
   const themes = themesFor(type);
   const name = cfg.attrs.theme;
@@ -275,11 +270,16 @@ function effectiveTheme(type, cfg) {
   return themesFor(type)[effectiveThemeName(type, cfg)] ?? {};
 }
 
-/** The colour a picker should show: the custom value, else the theme's own. */
+/** The colour a picker should show: the custom value, else the tile's default. */
 function colorValue(type, cfg, key) {
   const custom = cfg.vars[key];
   const fallback = key === 'tint' ? '#4f9be6' : effectiveTheme(type, cfg)[key] || '#000000';
   return toHex(custom || fallback);
+}
+
+function colorKeys(type) {
+  const t = TYPES[type];
+  return t.hands ? [...t.colors, 'hand'] : t.colors;
 }
 
 function control(c, cfg) {
@@ -297,22 +297,20 @@ function control(c, cfg) {
       const on = c.invert ? !cfg.attrs[c.key] : Boolean(cfg.attrs[c.key]);
       return `<div class="field"><label class="toggle" for="${id}">${esc(c.label)}<input type="checkbox" role="switch" id="${id}" data-toggle="${c.key}" data-invert="${c.invert ? 1 : 0}" ${on ? 'checked' : ''}${described}></label>${hint}</div>`;
     }
-    case 'sample':
-      return `<div class="field"><label class="toggle" for="${id}">${esc(c.label)}<input type="checkbox" role="switch" id="${id}" data-sample ${cfg.sample ? 'checked' : ''}${described}></label>${hint}</div>`;
     case 'select':
       return `<div class="field"><label for="${id}">${esc(c.label)}</label><select id="${id}" data-select="${c.key}"${described}>${c.options
         .map(([v, l]) => `<option value="${esc(v)}" ${String(value) === v ? 'selected' : ''}>${esc(l)}</option>`)
         .join('')}</select>${hint}</div>`;
     case 'month':
       return `<div class="field"><label for="${id}">${esc(c.label)}</label><input type="month" id="${id}" data-select="${c.key}" value="${esc(value)}"${described}>${hint}</div>`;
-    case 'place':
-      return `<div class="field"><label for="${id}">${esc(c.label)}</label><div class="inline"><input type="text" id="${id}" data-place value="${esc(value)}" placeholder="City or town" enterkeyhint="done" aria-describedby="${id}-h"><button type="button" class="btn" data-place-apply>Apply</button></div><p class="hint" id="${id}-h">Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so.</p></div>`;
+    case 'text':
+      return `<div class="field"><label for="${id}">${esc(c.label)}</label><div class="inline"><input type="text" id="${id}" data-text="${c.key}" value="${esc(value)}" placeholder="${esc(c.placeholder ?? '')}" ${c.inputmode ? `inputmode="${c.inputmode}"` : ''} enterkeyhint="done" autocapitalize="off" spellcheck="false"${described}><button type="button" class="btn" data-text-apply="${c.key}">Apply</button></div>${hint}</div>`;
     default:
       return '';
   }
 }
 
-/** One colour picker row: swatch, name and hex value. Custom colours get a ring and a "Custom" tag. */
+/** One colour picker row: swatch, name and hex value. Changed colours get a ring and a "Custom" tag. */
 function colorRow(type, cfg, key, labelOverride) {
   const t = TYPES[type];
   const label = labelOverride ?? t.colorLabels?.[key] ?? COLOR_LABELS[key];
@@ -325,94 +323,75 @@ function colorRow(type, cfg, key, labelOverride) {
   </label>`;
 }
 
-// Sections open on first visit. After that the Studio remembers what you opened and closed.
-const DEFAULT_OPEN = { Appearance: true, Colours: true, 'Clock hands': true, Forecast: true, Content: true, Month: true, 'Layout and display': true, 'Time and language': false };
-
-function section(title, body, meta = '') {
-  const open = state.open?.[title] ?? DEFAULT_OPEN[title] ?? true;
-  return `<details class="group" data-section="${esc(title)}" ${open ? 'open' : ''}><summary class="group__t"><span>${esc(title)}</span><span class="group__meta">${esc(meta)}</span></summary><div class="group__body">${body}</div></details>`;
+/** The groups this tile offers, in order. */
+function groupsFor(type) {
+  return GROUPS.filter(([g]) => g !== 'hands' || TYPES[type].hands);
 }
 
-function renderPanel() {
-  const type = state.current;
+function currentGroup(type) {
+  const ids = groupsFor(type).map(([g]) => g);
+  return ids.includes(state.group) ? state.group : ids[0];
+}
+
+function groupBody(type, group) {
   const t = TYPES[type];
   const cfg = state.tiles[type];
-  const themes = themesFor(type);
-  const activeName = effectiveThemeName(type, cfg);
-  const themeNames = Object.keys(themes);
+  const fields = (list) => (list ?? []).map((c) => control(c, cfg)).join('');
 
-  // Appearance: theme, face, typeface and night theme.
-  const swatches = themeNames.length > 1
-    ? `<div class="field"><span class="field__l" id="theme-l">Theme</span><div class="swatches" role="group" aria-labelledby="theme-l">${themeNames
-        .map((n) => {
-          const th = themes[n];
-          return `<button type="button" class="swatch" data-theme-name="${n}" aria-pressed="${n === activeName}" title="${n}" style="--sw-surface:${th.surface};--sw-accent:${th.accent}"><i></i>${n}</button>`;
-        })
-        .join('')}</div></div>`
-    : '';
-  const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere.</p></div>`;
-  const night = themeNames.length > 1
-    ? `<div class="field"><label for="c-night-theme">At night, switch to</label><select id="c-night-theme" data-select="night-theme" aria-describedby="c-night-h"><option value="">Keep the same theme</option>${themeNames
-        .map((n) => `<option value="${n}" ${cfg.attrs['night-theme'] === n ? 'selected' : ''}>${n}</option>`)
-        .join('')}</select><p class="hint" id="c-night-h">Night runs from 7 pm to 7 am in the tile's time zone.</p></div>`
-    : '';
-  const appearance = swatches + (t.look ?? []).map((c) => control(c, cfg)).join('') + font + night;
+  if (group === 'style') {
+    const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere.</p></div>`;
+    const frameValue = cfg.attrs.frame || (type === 'poster' ? 'none' : 'device');
+    const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Device'], ['bezel', 'Bezel'], ['none', 'None']]
+      .map(([v, l]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${frameValue === v}">${l}</button>`)
+      .join('')}</div></div>`;
+    const size = `<div class="field"><label class="field__l" for="c-size">Size <output data-out="size">${cfg.size} px</output></label><input type="range" id="c-size" min="180" max="${type === 'poster' ? 760 : 560}" step="10" value="${cfg.size}" data-size></div>`;
+    const radius = cfg.vars.radius ?? 22;
+    const corners = t.corners === false ? '' : `<div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="40" step="1" value="${radius}" data-radius></div>`;
+    return fields(t.style) + frame + `<div class="row2${corners ? '' : ' row2--one'}">${size}${corners}</div>` + font;
+  }
 
-  // Colours: every picker applies instantly; picking a theme restores its colours.
-  const customCount = [...t.colors, ...(t.hands ? ['hand'] : [])].filter((k) => cfg.vars[k]).length;
-  const colors = `<div class="field">
-      <span class="field__l">Pick any colour <button type="button" class="link" data-reset-colors ${customCount ? '' : 'hidden'}>Use theme colours</button></span>
-      <div class="crows">${t.colors.map((k) => colorRow(type, cfg, k)).join('')}</div>
-      <p class="hint">${type === 'weather'
-        ? 'The sky follows the live weather. A tint recolours it while keeping the clouds and light.'
-        : type === 'clock' && (cfg.attrs.variant || 'numerals') === 'relief'
-          ? 'Relief numerals are pressed into the background, so they take their colour from it.'
-          : 'Custom colours sit on top of the theme. Choosing a theme again resets them.'}</p>
-    </div>`;
+  if (group === 'colours') {
+    const any = colorKeys(type).some((k) => cfg.vars[k]);
+    const note = t.colorHint ?? (type === 'clock' && (cfg.attrs.variant || 'numerals') === 'relief'
+      ? 'Relief numerals are pressed into the background, so they take their colour from it.'
+      : 'Click a swatch to pick any colour. The preview updates as you choose.');
+    return `<div class="crows">${colorKeys(type).map((k) => colorRow(type, cfg, k)).join('')}</div>
+      <p class="hint">${esc(note)}</p>
+      <button type="button" class="btn btn--quiet btn--block" data-reset-colors ${any ? '' : 'disabled'}>Reset colours</button>`;
+  }
 
-  // Clock hands: design, colour and seconds.
-  const handValue = cfg.attrs.hands || 'modern';
-  const hands = t.hands
-    ? `<div class="field"><span class="field__l" id="hands-l">Design</span><div class="hstyles" role="radiogroup" aria-labelledby="hands-l">${HAND_STYLES.map(
+  if (group === 'hands') {
+    const handValue = cfg.attrs.hands || 'modern';
+    return `<div class="field"><span class="field__l" id="hands-l">Design</span><div class="hstyles" role="radiogroup" aria-labelledby="hands-l">${HAND_STYLES.map(
         ([v, l, d]) => `<button type="button" class="hstyle" role="radio" data-hands="${v}" aria-checked="${handValue === v}" tabindex="${handValue === v ? 0 : -1}">
             <span class="hstyle__dial" data-hand-preview="${v}"></span>
             <span class="hstyle__t">${l}</span><span class="hstyle__d">${d}</span>
           </button>`,
       ).join('')}</div></div>
-      <div class="field"><span class="field__l">Colour</span><div class="crows">${colorRow(type, cfg, 'hand')}${t.colors.includes('accent') ? colorRow(type, cfg, 'accent', 'Seconds hand') : ''}</div></div>
-      ${(t.handControls ?? []).map((c) => control(c, cfg)).join('')}`
-    : '';
+      <div class="crows">${colorRow(type, cfg, 'hand')}${colorRow(type, cfg, 'accent', 'Seconds hand')}</div>
+      ${fields(t.handControls)}`;
+  }
 
-  // Layout and display: frame, size and corners, then tile-specific layout.
-  const frameOptions = [['device', 'Device'], ['bezel', 'Bezel'], ['none', 'None']];
-  const frameValue = cfg.attrs.frame || (type === 'poster' ? 'none' : 'device');
-  const radius = cfg.vars.radius ?? (type === 'poster' ? 4 : 22);
-  const layout = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l" aria-describedby="frame-h">${frameOptions
-      .map(([v, l]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${frameValue === v}">${l}</button>`)
-      .join('')}</div><p class="hint" id="frame-h">Device adds a camera dot and shadow to the black bezel. None shows just the screen.</p></div>
-    <div class="row2">
-      <div class="field"><label class="field__l" for="c-size">Size <output data-out="size">${cfg.size} px</output></label><input type="range" id="c-size" min="180" max="${type === 'poster' ? 760 : 560}" step="10" value="${cfg.size}" data-size></div>
-      <div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="40" step="1" value="${radius}" data-radius></div>
-    </div>
-    ${(t.display ?? []).map((c) => control(c, cfg)).join('')}`;
+  if (group === 'options') return fields(t.options);
+  if (group === 'time') return fields(t.time);
+  return '';
+}
 
-  const frameLabel = frameOptions.find(([v]) => v === frameValue)[1];
+function renderPanel() {
+  const type = state.current;
+  const t = TYPES[type];
+  const group = currentGroup(type);
   const panel = $('[data-panel]');
-  const scroll = panel.scrollTop;
   panel.id = 'studio-panel';
   panel.setAttribute('role', 'tabpanel');
   panel.setAttribute('aria-labelledby', `tab-${type}`);
-  panel.innerHTML =
-    `<p class="panel__intro">Changes apply to the preview straight away.</p>` +
-    section('Appearance', appearance, activeName) +
-    section('Colours', colors, customCount ? `${customCount} custom` : 'From theme') +
-    (t.hands ? section('Clock hands', hands, HAND_STYLES.find(([v]) => v === handValue)[1]) : '') +
-    (t.content ? section(t.content[0], t.content[1].map((c) => control(c, cfg)).join('')) : '') +
-    section('Layout and display', layout, `${frameLabel} · ${cfg.size} px`) +
-    section('Time and language', t.time.map((c) => control(c, cfg)).join(''), cfg.attrs.timezone ? ZONES.find(([z]) => z === cfg.attrs.timezone)?.[1] ?? '' : 'This device') +
-    `<div class="panel__foot"><button type="button" class="btn btn--quiet" data-reset-tile>Reset ${esc(t.label.toLowerCase())}</button><a class="btn btn--solid" href="#install" data-get-code>Get the code</a></div>`;
+  panel.innerHTML = `
+    <div class="ptabs" role="tablist" aria-label="Settings">${groupsFor(type)
+      .map(([g, l]) => `<button type="button" role="tab" id="pt-${g}" data-group="${g}" aria-selected="${g === group}" tabindex="${g === group ? 0 : -1}" aria-controls="panel-body">${l}</button>`)
+      .join('')}</div>
+    <div class="panel__body" id="panel-body" role="tabpanel" aria-labelledby="pt-${group}">${groupBody(type, group)}</div>
+    <div class="panel__foot"><button type="button" class="btn btn--quiet" data-reset-tile>Reset ${esc(t.label.toLowerCase())}</button><a class="btn btn--solid" href="#install" data-get-code>Get the code</a></div>`;
   renderHandPreviews();
-  panel.scrollTop = scroll;
 }
 
 /** Small live clocks inside the hand-design buttons, drawn by the real element in the current colours. */
@@ -468,7 +447,6 @@ function snippetParts() {
   const attrs = { ...cfg.attrs };
   if (attrs.frame === (type === 'poster' ? 'none' : 'device')) delete attrs.frame;
   if (attrs.hands === 'modern') delete attrs.hands;
-  if (type === 'glance' && cfg.sample) attrs.events = JSON.stringify(sampleEvents());
   const vars = {};
   for (const k of COLOR_KEYS) if (cfg.vars[k]) vars[k] = cfg.vars[k];
   if (cfg.vars.radius != null) vars.radius = cfg.vars.radius;
@@ -506,8 +484,11 @@ function renderSnippet() {
   const key = (k) => (/^[a-z]+$/i.test(k) ? k : js(k));
   const obj = (o) => `{ ${Object.entries(o).map(([k, v]) => `${key(k)}: ${v === true ? 'true' : typeof v === 'number' ? v : js(v)}`).join(', ')} }`;
   const mac = { ...entries.reduce((o, [k, v]) => ((o[k] = v), o), {}) };
-  delete mac.events;
+  // Übersicht downloads calendar feeds itself with curl, so the link goes in its own key.
+  const ics = mac.ics;
+  delete mac.ics;
   const tile = [`{`, `  tag: '${tag}',`, `  attrs: ${obj(mac)},`];
+  if (ics) tile.push(`  ics: ${js(ics)},`);
   if (Object.keys(vars).length) tile.push(`  style: ${obj(vars)},`);
   tile.push(`  size: ${Math.min(state.tiles[state.current].size, 320)},`, `  top: 48,`, `  left: 48,`, `},`);
   $('[data-code="mac-tile"]').textContent = tile.join('\n');
@@ -519,7 +500,6 @@ function displayURL() {
   const params = new URLSearchParams({ tile: type });
   for (const [k, v] of Object.entries(cfg.attrs)) if (v !== '' && v != null && v !== false) params.set(k, v === true ? '' : v);
   for (const [k, v] of Object.entries(cfg.vars)) if (v !== '' && v != null) params.set(`--${k}`, v);
-  if (type === 'glance' && cfg.sample) params.set('sample', '1');
   return new URL(`display.html?${params}`, location.href).href;
 }
 
@@ -538,16 +518,11 @@ function renderStudio(rebuild = false) {
   for (const b of $$('[data-bg]', $('[data-backdrops]'))) b.setAttribute('aria-pressed', String(b.dataset.bg === state.bg));
 }
 
-/** After a colour or hands change, refresh the bits of the panel that describe it without rebuilding it. */
+/** After a colour change, enable or disable the reset button without rebuilding the panel. */
 function refreshPanelMeta() {
-  const type = state.current;
-  const cfg = state.tiles[type];
-  const t = TYPES[type];
-  const n = [...t.colors, ...(t.hands ? ['hand'] : [])].filter((k) => cfg.vars[k]).length;
-  const meta = $('[data-section="Colours"] .group__meta');
-  if (meta) meta.textContent = n ? `${n} custom` : 'From theme';
+  const cfg = state.tiles[state.current];
   const reset = $('[data-reset-colors]');
-  if (reset) reset.hidden = !n;
+  if (reset) reset.disabled = !colorKeys(state.current).some((k) => cfg.vars[k]);
 }
 
 function bindStudio() {
@@ -603,22 +578,17 @@ function bindStudio() {
       setHands(hs.dataset.hands);
       return;
     }
-    const sw = e.target.closest('[data-theme-name]');
-    if (sw) {
-      const had = [...TYPES[state.current].colors, 'hand'].some((k) => cfg.vars[k]);
-      cfg.attrs.theme = sw.dataset.themeName;
-      for (const k of [...TYPES[state.current].colors, 'hand']) delete cfg.vars[k];
-      renderPanel();
-      updatePreview();
-      panel.querySelector(`[data-theme-name="${sw.dataset.themeName}"]`)?.focus();
-      if (had) note(`Switched to ${sw.dataset.themeName}. Your custom colours were replaced by the theme's.`);
+    const tab = e.target.closest('[data-group]');
+    if (tab) {
+      setGroup(tab.dataset.group);
       return;
     }
     if (e.target.closest('[data-reset-colors]')) {
-      for (const k of [...TYPES[state.current].colors, 'hand']) delete cfg.vars[k];
+      for (const k of colorKeys(state.current)) delete cfg.vars[k];
       renderPanel();
       updatePreview();
-      note('Back to the theme colours.');
+      panel.querySelector('[data-group="colours"]')?.focus();
+      note('Colours reset to the defaults.');
       return;
     }
     if (e.target.closest('[data-get-code]')) {
@@ -626,7 +596,8 @@ function bindStudio() {
       openWay('html', true);
       return;
     }
-    if (e.target.closest('[data-place-apply]')) applyPlace();
+    const apply = e.target.closest('[data-text-apply]');
+    if (apply) applyText(apply.dataset.textApply);
     if (e.target.closest('[data-reset-tile]')) {
       state.tiles[state.current] = freshState().tiles[state.current];
       renderPanel();
@@ -645,18 +616,25 @@ function bindStudio() {
       const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : values.length - 1;
       setHands(values[(i + step) % values.length]);
     }
-    if (e.key === 'Enter' && e.target.matches('[data-place]')) {
+    const tab = e.target.closest('[data-group]');
+    if (tab && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
       e.preventDefault();
-      applyPlace();
+      const ids = groupsFor(state.current).map(([g]) => g);
+      const i = ids.indexOf(tab.dataset.group);
+      setGroup(ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length]);
+    }
+    if (e.key === 'Enter' && e.target.matches('[data-text]')) {
+      e.preventDefault();
+      applyText(e.target.dataset.text);
     }
   });
 
-  panel.addEventListener('toggle', (e) => {
-    const d = e.target.closest?.('[data-section]');
-    if (!d) return;
-    state.open = { ...(state.open || {}), [d.dataset.section]: d.open };
+  function setGroup(group) {
+    state.group = group;
+    renderPanel();
     save();
-  }, true);
+    panel.querySelector(`[data-group="${group}"]`)?.focus();
+  }
 
   panel.addEventListener('input', (e) => {
     const cfg = state.tiles[state.current];
@@ -672,7 +650,7 @@ function bindStudio() {
       for (const hex of panel.querySelectorAll(`[data-hex="${key}"]`)) hex.textContent = t.value.toUpperCase();
       refreshPanelMeta();
       updatePreview();
-      if (key === 'hand' || key === 'accent' || key === 'surface' || key === 'ink') renderHandPreviews();
+      if ($('[data-hand-preview]')) renderHandPreviews();
     } else if (t.matches('[data-size]')) {
       cfg.size = Number(t.value);
       panel.querySelector('[data-out="size"]').textContent = `${cfg.size} px`;
@@ -692,9 +670,6 @@ function bindStudio() {
       const present = t.dataset.invert === '1' ? !on : on;
       cfg.attrs[t.dataset.toggle] = present ? true : '';
       updatePreview();
-    } else if (t.matches('[data-sample]')) {
-      cfg.sample = t.checked;
-      updatePreview();
     } else if (t.matches('[data-select]')) {
       cfg.attrs[t.dataset.select] = t.value;
       updatePreview();
@@ -704,12 +679,15 @@ function bindStudio() {
     }
   });
 
-  function applyPlace() {
-    const input = panel.querySelector('[data-place]');
+  function applyText(key) {
+    const input = panel.querySelector(`[data-text="${key}"]`);
     if (!input) return;
-    state.tiles[state.current].attrs.location = input.value.trim();
+    let value = input.value.trim();
+    if (key === 'ics') value = value.replace(/^webcal:/i, 'https:');
+    state.tiles[state.current].attrs[key] = value;
     updatePreview();
-    note(input.value.trim() ? `Looking up ${input.value.trim()}.` : 'Location cleared. The tile will use London.');
+    if (key === 'location') note(value ? `Looking up ${value}.` : 'Location cleared. The tile will use London.');
+    if (key === 'ics') note(value ? 'Loading your calendar. If the feed blocks browsers, the corner keeps showing the year.' : 'Calendar link removed.');
   }
 
   $('[data-backdrops]').addEventListener('click', (e) => {
