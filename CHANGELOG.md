@@ -6,6 +6,7 @@
 - `<bezel-glance>` hands now read `--bezel-hand`, falling back to the theme's text colour as before.
 - The `device` frame no longer draws a light aluminium rim outside the black bezel. The bezel is now a single, even black border.
 - Übersicht widget: an optional `style` object per tile sets CSS variables.
+- Studio: the frame choice is now Bezel or None; settings only appear when they change something (second time zone on the Classic face, date off the Relief face, seconds motion with seconds on, location with the weather corner on); the poster offers language without a time zone; the preview backdrop is labelled Light or Dark.
 - Studio redesign: the preview and settings fit on one screen, with settings in tabs (Style, Colours, Hands, Options, Time) and only the options each tile supports. Themes leave the Studio in favour of colour pickers with a reset; the library's `theme` attribute is unchanged. Glance takes an optional calendar link in place of the sample agenda.
 - Site: the poster calendar joins the showcase, the hero is trimmed to the headline, the project details move into a redesigned footer, and the code cards start closed with matching styles.
 - Site: a larger showcase replaces the presets section, the studio controls are regrouped (Appearance, Colours, Clock hands, Layout and display, Time and language), and the code and install options are four expandable cards.

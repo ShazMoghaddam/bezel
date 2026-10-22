@@ -79,11 +79,12 @@ const TYPES = {
     hands: true,
     handControls: [
       { type: 'toggle', key: 'hide-seconds', label: 'Seconds hand', invert: true },
-      { type: 'seg', key: 'sweep', label: 'Seconds motion', options: [['', 'Smooth sweep'], ['tick', 'Tick']] },
+      { type: 'seg', key: 'sweep', label: 'Seconds motion', options: [['', 'Smooth sweep'], ['tick', 'Tick']], when: (a) => !a['hide-seconds'] },
     ],
     options: [
-      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, hint: 'Shown on the Numerals and Classic faces.' },
-      { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'None'], ...ZONES.slice(1)], hint: 'Adds a small dial for another city on the Classic face.' },
+      // The Relief face has no date, and only the Classic face has room for a second dial.
+      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' },
+      { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'None'], ...ZONES.slice(1)], hint: 'A small dial for another city, in place of the 6.', when: (a) => a.variant === 'classic' },
     ],
     time,
   },
@@ -125,8 +126,8 @@ const TYPES = {
     hands: true,
     options: [
       { type: 'toggle', key: 'hide-weather', label: 'Weather corner', invert: true },
-      locationField,
-      units,
+      { ...locationField, when: (a) => !a['hide-weather'] },
+      { ...units, when: (a) => !a['hide-weather'] },
       {
         type: 'text', key: 'ics', label: 'Calendar link (optional)', placeholder: 'https://… .ics', inputmode: 'url',
         hint: "Paste your calendar's iCal (.ics) address to list today's events. On the Mac desktop any feed works. In a browser, Google and iCloud feeds are usually blocked, and the corner then shows how far through the year you are.",
@@ -147,7 +148,9 @@ const TYPES = {
       weekStart,
       { type: 'toggle', key: 'no-highlight', label: 'Highlight today', invert: true },
     ],
-    time: time.slice(0, 1).concat(time.slice(2)),
+    // A time zone would only move which day is "today" around midnight, so the poster offers language alone.
+    time: time.slice(2),
+    timeLabel: 'Language',
   },
 };
 
@@ -324,8 +327,17 @@ function colorRow(type, cfg, key, labelOverride) {
 }
 
 /** The groups this tile offers, in order. */
+/** A control is shown only when it has a visible effect with the tile's current settings. */
+function visible(list, type) {
+  const attrs = { variant: 'numerals', ...state.tiles[type].attrs };
+  return (list ?? []).filter((c) => !c.when || c.when(attrs));
+}
+
 function groupsFor(type) {
-  return GROUPS.filter(([g]) => g !== 'hands' || TYPES[type].hands);
+  const t = TYPES[type];
+  return GROUPS
+    .filter(([g]) => (g !== 'hands' || t.hands) && (g !== 'options' || visible(t.options, type).length))
+    .map(([g, l]) => [g, g === 'time' && t.timeLabel ? t.timeLabel : l]);
 }
 
 function currentGroup(type) {
@@ -336,13 +348,14 @@ function currentGroup(type) {
 function groupBody(type, group) {
   const t = TYPES[type];
   const cfg = state.tiles[type];
-  const fields = (list) => (list ?? []).map((c) => control(c, cfg)).join('');
+  const fields = (list) => visible(list, type).map((c) => control(c, cfg)).join('');
 
   if (group === 'style') {
     const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere.</p></div>`;
-    const frameValue = cfg.attrs.frame || (type === 'poster' ? 'none' : 'device');
-    const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Device'], ['bezel', 'Bezel'], ['none', 'None']]
-      .map(([v, l]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${frameValue === v}">${l}</button>`)
+    // Two choices: the black bezel (the library's default "device" frame) or just the screen.
+    const framed = (cfg.attrs.frame || (type === 'poster' ? 'none' : 'device')) !== 'none';
+    const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Bezel', framed], ['none', 'None', !framed]]
+      .map(([v, l, on]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${on}">${l}</button>`)
       .join('')}</div></div>`;
     const size = `<div class="field"><label class="field__l" for="c-size">Size <output data-out="size">${cfg.size} px</output></label><input type="range" id="c-size" min="180" max="${type === 'poster' ? 760 : 560}" step="10" value="${cfg.size}" data-size></div>`;
     const radius = cfg.vars.radius ?? 22;
@@ -566,6 +579,8 @@ function bindStudio() {
         // Follow the new face's own palette unless the user picked one deliberately.
         const defaults = { numerals: 'sage', relief: 'blush', classic: 'porcelain' };
         if (!cfg.attrs.theme || cfg.attrs.theme === defaults[cfg.attrs.variant || 'numerals']) cfg.attrs.theme = defaults[value];
+        // Only the Classic face draws the second dial, so don't carry the setting into code where it does nothing.
+        if (value !== 'classic') delete cfg.attrs['second-timezone'];
       }
       cfg.attrs[key] = value;
       renderPanel();
@@ -670,6 +685,10 @@ function bindStudio() {
       const present = t.dataset.invert === '1' ? !on : on;
       cfg.attrs[t.dataset.toggle] = present ? true : '';
       updatePreview();
+      if (['hide-seconds', 'hide-weather'].includes(t.dataset.toggle)) {
+        renderPanel();
+        panel.querySelector(`[data-toggle="${t.dataset.toggle}"]`)?.focus();
+      }
     } else if (t.matches('[data-select]')) {
       cfg.attrs[t.dataset.select] = t.value;
       updatePreview();
