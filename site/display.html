@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>Bezel Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap">
+<style>
+  /* A full-bleed stage for one tile. Add it to the home screen on an iPad for a chrome-free clock. */
+  html, body { height: 100%; margin: 0; background: #000; color: #fff; overflow: hidden; }
+  body { display: grid; place-items: center; cursor: default; -webkit-user-select: none; user-select: none; }
+  body.idle { cursor: none; }
+  #stage { display: grid; place-items: center; width: 100%; height: 100%; transition: transform 2s ease; }
+  .hint {
+    position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); translate: -50% 0;
+    font: 500 13px/1.3 -apple-system, BlinkMacSystemFont, "Geist", sans-serif; color: rgba(255,255,255,.55);
+    padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,.08); transition: opacity .5s; white-space: nowrap;
+  }
+  body.idle .hint { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { #stage { transition: none; } }
+</style>
+<script type="module" src="../src/index.js"></script>
+</head>
+<body>
+<div id="stage"></div>
+<p class="hint">Tap for full screen</p>
+<script type="module">
+  // URL format: display.html?tile=clock&variant=relief&theme=blush&--accent=%23ff0066
+  // Every plain parameter becomes an attribute; parameters starting with "--" become --bezel-* CSS variables.
+  const TAGS = { clock: 'bezel-clock', calendar: 'bezel-calendar', weather: 'bezel-weather', glance: 'bezel-glance', poster: 'bezel-poster' };
+  const params = new URLSearchParams(location.search);
+  const type = TAGS[params.get('tile')] ? params.get('tile') : 'clock';
+  const tile = document.createElement(TAGS[type]);
+
+  for (const [k, v] of params) {
+    if (k === 'tile' || k === 'sample') continue;
+    if (k.startsWith('--')) {
+      const name = k.slice(2);
+      if (!/^[a-z-]+$/.test(name)) continue;
+      tile.style.setProperty(`--bezel-${name}`, name === 'radius' ? `${parseFloat(v)}cqw` : v);
+    } else if (/^[a-z-]+$/.test(k)) {
+      tile.setAttribute(k, v);
+    }
+  }
+  if (type === 'glance' && params.get('sample') === '1') {
+    const d = new Date();
+    const at = (h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+    const h = Math.min(21, d.getHours() + 1);
+    tile.setAttribute('events', JSON.stringify([
+      { title: 'Product review', start: at(h, 0), end: at(h + 1, 30) },
+      { title: 'Design sync', start: at(h + 2, 0), end: at(h + 2, 45) },
+    ]));
+  }
+  tile.style.setProperty('--bezel-size', type === 'poster' ? 'min(94vw, calc(94vh * 4 / 3))' : 'min(90vw, 90vh)');
+  if (!params.has('frame') && type !== 'poster') tile.setAttribute('frame', 'none');
+  document.getElementById('stage').append(tile);
+
+  // Keep the screen awake where the browser allows it.
+  let lock = null;
+  const keepAwake = async () => {
+    try {
+      if (document.visibilityState === 'visible') lock = await navigator.wakeLock?.request('screen');
+    } catch {}
+  };
+  keepAwake();
+  document.addEventListener('visibilitychange', keepAwake);
+
+  // Hide the cursor and hint when idle.
+  let idle = 0;
+  const wake = () => {
+    document.body.classList.remove('idle');
+    clearTimeout(idle);
+    idle = setTimeout(() => document.body.classList.add('idle'), 3000);
+  };
+  addEventListener('pointermove', wake);
+  wake();
+
+  addEventListener('click', async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+      else await document.exitFullscreen();
+    } catch {}
+    keepAwake();
+  });
+
+  // Burn-in protection: drift a few pixels every minute.
+  const stage = document.getElementById('stage');
+  setInterval(() => {
+    stage.style.transform = `translate(${Math.round((Math.random() - 0.5) * 14)}px, ${Math.round((Math.random() - 0.5) * 14)}px)`;
+  }, 60_000);
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "name": "bezel-tiles",
+  "version": "1.0.0",
+  "description": "High-definition, customisable clock, calendar and weather tiles as zero-dependency web components. Works on any website, as a desk display, or on the macOS desktop via Übersicht.",
+  "type": "module",
+  "main": "dist/bezel.js",
+  "module": "dist/bezel.js",
+  "exports": {
+    ".": "./dist/bezel.js",
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.js",
+    "serve": "python3 -m http.server 4173",
+    "check": "npm run build && npm test"
+  },
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "clock",
+    "calendar",
+    "weather",
+    "widget",
+    "dashboard",
+    "standby",
+    "ubersicht"
+  ],
+  "author": "Shaz Moghaddam (https://shazmoghaddam.github.io)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShazMoghaddam/bezel.git"
+  },
+  "homepage": "https://shazmoghaddam.github.io/bezel/",
+  "bugs": "https://github.com/ShazMoghaddam/bezel/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "linkedom": "0.18.5"
+  }
+}

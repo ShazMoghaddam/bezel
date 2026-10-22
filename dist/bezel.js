@@ -1,0 +1,1880 @@
+/*! Bezel v1.0.0 | MIT | github.com/ShazMoghaddam/bezel */
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/core/frame.js
+var FRAME_CSS = (
+  /* css */
+  `
+:host {
+  --_font: var(--bezel-font, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Helvetica Neue", Roboto, Arial, sans-serif);
+  --_rim-r: var(--bezel-radius, 22cqw);
+  --_rim-pad: 1.15cqw;
+  --_bezel-pad: 5cqw;
+  display: inline-block;
+  position: relative;
+  box-sizing: border-box;
+  inline-size: var(--bezel-size, 320px);
+  max-inline-size: 100%;
+  aspect-ratio: var(--bezel-aspect, 1);
+  vertical-align: top;
+  container-type: inline-size;
+  font-family: var(--_font);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+:host([hidden]) { display: none; }
+*, *::before, *::after { box-sizing: border-box; }
+
+.frame { position: absolute; inset: 0; }
+
+/* Device: brushed aluminium rim, black glass bezel, screen. */
+.frame--device {
+  border-radius: var(--_rim-r);
+  padding: var(--_rim-pad);
+  background:
+    linear-gradient(150deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 70%, rgba(255,255,255,.55) 100%),
+    linear-gradient(160deg, #f2f3f5 0%, #c6c9ce 38%, #e9ebee 58%, #aeb2b8 100%);
+  box-shadow:
+    0 0.2cqw 0.4cqw rgba(0,0,0,.10),
+    0 1.6cqw 3.2cqw -0.6cqw rgba(0,0,0,.20),
+    0 6cqw 10cqw -3cqw rgba(0,0,0,.30),
+    inset 0 0 0 0.12cqw rgba(255,255,255,.65),
+    inset 0 -0.2cqw 0.3cqw rgba(0,0,0,.18);
+}
+.bezel {
+  position: relative;
+  block-size: 100%;
+  border-radius: calc(var(--_rim-r) - var(--_rim-pad));
+  padding: var(--_bezel-pad);
+  background: radial-gradient(120% 90% at 30% 0%, #1b1c1f 0%, #050506 60%);
+  box-shadow: inset 0 0 0 0.12cqw rgba(255,255,255,.06);
+}
+.frame--device .bezel::before {
+  content: "";
+  position: absolute;
+  inset-block-start: calc(var(--_bezel-pad) * 0.42);
+  inset-inline-start: 50%;
+  inline-size: 1.15cqw;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #3c4a66 0%, #12151c 45%, #050608 75%);
+  box-shadow: 0 0 0 0.25cqw #0c0d10;
+}
+.screen {
+  position: relative;
+  block-size: 100%;
+  overflow: hidden;
+  border-radius: calc(var(--_rim-r) - var(--_rim-pad) - var(--_bezel-pad));
+  container-type: size;
+  background: var(--_surface);
+  color: var(--_ink);
+  isolation: isolate;
+}
+.frame--device .screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 50;
+  background: linear-gradient(155deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 34%);
+  box-shadow: inset 0 0 0 0.3cqw rgba(0,0,0,.18);
+}
+
+/* Bezel: black border, no rim. */
+.frame--bezel .bezel {
+  border-radius: var(--_rim-r);
+  box-shadow: 0 1.2cqw 3cqw -1cqw rgba(0,0,0,.35);
+}
+.frame--bezel .screen { border-radius: calc(var(--_rim-r) - var(--_bezel-pad)); }
+
+/* None: just the screen, for embedding inside your own UI. */
+.frame--none .bezel { padding: 0; background: none; box-shadow: none; border-radius: var(--_rim-r); }
+.frame--none .screen { border-radius: calc(var(--_rim-r) * 0.72); }
+
+svg { display: block; overflow: visible; }
+.num { font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+.sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+`
+);
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// src/core/ticker.js
+var subscribers = { frame: /* @__PURE__ */ new Set(), second: /* @__PURE__ */ new Set(), minute: /* @__PURE__ */ new Set() };
+var rafId = 0;
+var timeoutId = 0;
+var lastSecond = -1;
+var lastMinute = -1;
+var hasWindow = typeof window !== "undefined";
+var raf = hasWindow && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
+var caf = hasWindow && window.cancelAnimationFrame ? window.cancelAnimationFrame.bind(window) : null;
+function prefersReducedMotion() {
+  return hasWindow && typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
+}
+function emit(set, now) {
+  for (const fn of set) {
+    try {
+      fn(now);
+    } catch (err) {
+      console.error("[bezel]", err);
+    }
+  }
+}
+function step() {
+  rafId = 0;
+  timeoutId = 0;
+  const now = Date.now();
+  emit(subscribers.frame, now);
+  const second = Math.floor(now / 1e3);
+  if (second !== lastSecond) {
+    lastSecond = second;
+    emit(subscribers.second, now);
+    const minute = Math.floor(second / 60);
+    if (minute !== lastMinute) {
+      lastMinute = minute;
+      emit(subscribers.minute, now);
+    }
+  }
+  schedule();
+}
+function schedule() {
+  if (rafId || timeoutId) return;
+  const total = subscribers.frame.size + subscribers.second.size + subscribers.minute.size;
+  if (!total) return;
+  const pageVisible = !hasWindow || typeof document === "undefined" || document.visibilityState !== "hidden";
+  if (subscribers.frame.size && raf && pageVisible) {
+    rafId = raf(step);
+  } else {
+    timeoutId = setTimeout(step, 1e3 - Date.now() % 1e3 + 2);
+  }
+}
+if (hasWindow && typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (rafId && caf) caf(rafId);
+    if (timeoutId) clearTimeout(timeoutId);
+    rafId = 0;
+    timeoutId = 0;
+    lastSecond = -1;
+    lastMinute = -1;
+    schedule();
+  });
+}
+function subscribe(rate, fn) {
+  const set = subscribers[rate];
+  if (!set) throw new Error(`[bezel] Unknown tick rate "${rate}"`);
+  set.add(fn);
+  schedule();
+  return () => set.delete(fn);
+}
+
+// src/core/time.js
+var time_exports = {};
+__export(time_exports, {
+  dayOfYear: () => dayOfYear,
+  daysInYear: () => daysInYear,
+  formatClock: () => formatClock,
+  handAngles: () => handAngles,
+  isValidTimeZone: () => isValidTimeZone,
+  isoWeek: () => isoWeek,
+  names: () => names,
+  parseWeekStart: () => parseWeekStart,
+  prefers12h: () => prefers12h,
+  tzOffset: () => tzOffset,
+  weekStartFor: () => weekStartFor,
+  zoned: () => zoned,
+  zonedToUtc: () => zonedToUtc
+});
+var MINUTE = 6e4;
+var offsetCache = /* @__PURE__ */ new Map();
+var partsFormatters = /* @__PURE__ */ new Map();
+var warned = /* @__PURE__ */ new Set();
+function partsFormatter(timeZone) {
+  let f = partsFormatters.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric"
+    });
+    partsFormatters.set(timeZone, f);
+  }
+  return f;
+}
+function isValidTimeZone(timeZone) {
+  if (!timeZone) return false;
+  try {
+    partsFormatter(timeZone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function tzOffset(ms, timeZone) {
+  if (!timeZone) return -new Date(ms).getTimezoneOffset() * MINUTE;
+  const minuteKey = Math.floor(ms / MINUTE);
+  const cached = offsetCache.get(timeZone);
+  if (cached && cached.minuteKey === minuteKey) return cached.offset;
+  let offset;
+  try {
+    const p = {};
+    for (const { type, value } of partsFormatter(timeZone).formatToParts(new Date(ms))) p[type] = value;
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+    offset = asUTC - Math.floor(ms / 1e3) * 1e3;
+  } catch {
+    if (!warned.has(timeZone)) {
+      warned.add(timeZone);
+      console.warn(`[bezel] Unknown time zone "${timeZone}", using the device time zone.`);
+    }
+    offset = -new Date(ms).getTimezoneOffset() * MINUTE;
+  }
+  offsetCache.set(timeZone, { minuteKey, offset });
+  return offset;
+}
+function zoned(ms = Date.now(), timeZone) {
+  const offset = tzOffset(ms, timeZone);
+  const d = new Date(ms + offset);
+  return {
+    ms,
+    offset,
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth(),
+    day: d.getUTCDate(),
+    weekday: d.getUTCDay(),
+    hours: d.getUTCHours(),
+    minutes: d.getUTCMinutes(),
+    seconds: d.getUTCSeconds(),
+    millis: d.getUTCMilliseconds()
+  };
+}
+function zonedToUtc(year, month, day, hours = 0, minutes = 0, seconds = 0, timeZone) {
+  const guess = Date.UTC(year, month, day, hours, minutes, seconds);
+  if (!timeZone) return new Date(year, month, day, hours, minutes, seconds).getTime();
+  const first = guess - tzOffset(guess, timeZone);
+  return guess - tzOffset(first, timeZone);
+}
+function handAngles(z, { smooth = true } = {}) {
+  const s = z.seconds + (smooth ? z.millis / 1e3 : 0);
+  const m = z.minutes + s / 60;
+  const h = z.hours % 12 + m / 60;
+  return { hour: h * 30, minute: m * 6, second: s * 6 };
+}
+var nameCache = /* @__PURE__ */ new Map();
+function names(locale = "en-GB") {
+  let n = nameCache.get(locale);
+  if (n) return n;
+  const fmt = (opts) => {
+    try {
+      return new Intl.DateTimeFormat(locale, { timeZone: "UTC", ...opts });
+    } catch {
+      return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...opts });
+    }
+  };
+  const days = (style) => Array.from({ length: 7 }, (_, i) => fmt({ weekday: style }).format(Date.UTC(1970, 0, 4 + i)));
+  const months = (style) => Array.from({ length: 12 }, (_, i) => fmt({ month: style }).format(Date.UTC(2001, i, 15)));
+  n = {
+    weekdayShort: days("short"),
+    weekdayNarrow: days("narrow"),
+    weekdayLong: days("long"),
+    monthShort: months("short"),
+    monthLong: months("long")
+  };
+  nameCache.set(locale, n);
+  return n;
+}
+var SUNDAY_REGIONS = /* @__PURE__ */ new Set(["US", "CA", "MX", "BR", "JP", "KR", "TW", "HK", "IL", "PH", "ZA", "AU", "IN", "SA", "AR", "CO", "PE", "VE", "GT", "PA"]);
+function weekStartFor(locale = "en-GB") {
+  try {
+    const loc = new Intl.Locale(locale);
+    const info = typeof loc.getWeekInfo === "function" ? loc.getWeekInfo() : loc.weekInfo;
+    if (info && info.firstDay) return info.firstDay % 7;
+    const region = loc.maximize().region;
+    return SUNDAY_REGIONS.has(region) ? 0 : 1;
+  } catch {
+    return 1;
+  }
+}
+function parseWeekStart(value, locale) {
+  if (value == null || value === "") return weekStartFor(locale);
+  const v = String(value).trim().toLowerCase();
+  if (/^[0-6]$/.test(v)) return Number(v);
+  const map = { su: 0, mo: 1, tu: 2, we: 3, th: 4, fr: 5, sa: 6 };
+  return map[v.slice(0, 2)] ?? weekStartFor(locale);
+}
+function prefers12h(locale = "en-GB") {
+  try {
+    const hc = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions().hourCycle;
+    return hc === "h11" || hc === "h12";
+  } catch {
+    return false;
+  }
+}
+function formatClock(hours, minutes, hour12) {
+  const mm = String(minutes).padStart(2, "0");
+  if (hour12) return `${hours % 12 || 12}:${mm}`;
+  return `${String(hours).padStart(2, "0")}:${mm}`;
+}
+function isoWeek(year, month, day) {
+  const d = new Date(Date.UTC(year, month, day));
+  const dow = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dow);
+  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
+  return Math.ceil(((d - yearStart) / 864e5 + 1) / 7);
+}
+function dayOfYear(year, month, day) {
+  return Math.round((Date.UTC(year, month, day) - Date.UTC(year, 0, 1)) / 864e5) + 1;
+}
+function daysInYear(year) {
+  return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0 ? 366 : 365;
+}
+
+// src/core/element.js
+var localeCache = /* @__PURE__ */ new Map();
+function safeLocale(tag) {
+  if (!tag) return "en-GB";
+  if (localeCache.has(tag)) return localeCache.get(tag);
+  let ok = "en-GB";
+  for (const candidate of [tag, String(tag).split(/[@.]/)[0].replace("_", "-")]) {
+    try {
+      ok = Intl.getCanonicalLocales(candidate)[0];
+      break;
+    } catch {
+    }
+  }
+  localeCache.set(tag, ok);
+  return ok;
+}
+var COMMON_ATTRIBUTES = ["frame", "theme", "timezone", "locale", "hour-cycle"];
+var FRAMES = /* @__PURE__ */ new Set(["device", "bezel", "none"]);
+var BezelElement = class extends HTMLElement {
+  static attributes = [];
+  static styles = "";
+  static themes = {};
+  static defaultTheme = "";
+  static defaultFrame = "device";
+  static get observedAttributes() {
+    return [...COMMON_ATTRIBUTES, ...this.attributes];
+  }
+  #queued = false;
+  #unsubscribe = null;
+  #observer = null;
+  #visible = true;
+  #connected = false;
+  #lastDayKey = "";
+  #authorLabel = false;
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+  }
+  connectedCallback() {
+    this.#connected = true;
+    if (!this.hasAttribute("role")) this.setAttribute("role", "img");
+    this.#authorLabel = this.hasAttribute("aria-label") && this.dataset.bezelLabel === void 0;
+    this.render();
+    this.#watchVisibility();
+    this.#resubscribe();
+    this.connected?.();
+  }
+  disconnectedCallback() {
+    this.#connected = false;
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
+    this.#observer?.disconnect();
+    this.#observer = null;
+    this.disconnected?.();
+  }
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue || !this.#connected) return;
+    this.attributeChanged?.(name, oldValue, newValue);
+    this.invalidate();
+  }
+  /** Re-renders on the next microtask, batching several attribute changes into one paint. */
+  invalidate() {
+    if (this.#queued) return;
+    this.#queued = true;
+    queueMicrotask(() => {
+      this.#queued = false;
+      if (!this.#connected) return;
+      this.render();
+      this.#resubscribe();
+    });
+  }
+  // ---- Shared settings -------------------------------------------------
+  get frame() {
+    const f = this.getAttribute("frame");
+    return FRAMES.has(f) ? f : this.constructor.defaultFrame;
+  }
+  get timeZone() {
+    const tz = this.getAttribute("timezone");
+    return tz && isValidTimeZone(tz) ? tz : void 0;
+  }
+  get locale() {
+    return safeLocale(this.getAttribute("locale") || typeof navigator !== "undefined" && navigator.language);
+  }
+  get hour12() {
+    const hc = this.getAttribute("hour-cycle");
+    if (hc === "12") return true;
+    if (hc === "24") return false;
+    return prefers12h(this.locale);
+  }
+  get themeName() {
+    const t = this.getAttribute("theme");
+    return t && this.constructor.themes[t] ? t : this.constructor.defaultTheme;
+  }
+  /** Boolean attribute helper: present and not "false". */
+  flag(name) {
+    const v = this.getAttribute(name);
+    return v !== null && v !== "false";
+  }
+  now() {
+    return zoned(Date.now(), this.timeZone);
+  }
+  get tickRate() {
+    return "minute";
+  }
+  get reducedMotion() {
+    return prefersReducedMotion();
+  }
+  // ---- Rendering --------------------------------------------------------
+  /** CSS custom properties for the active theme. Inline styles and page CSS override them. */
+  themeCSS() {
+    const theme = this.constructor.themes[this.themeName] ?? {};
+    const decl = Object.entries(theme).map(([k, v]) => `--_${k}: var(--bezel-${k}, ${v});`).join("");
+    return `:host { ${decl} }`;
+  }
+  render() {
+    const z = this.now();
+    this.#lastDayKey = `${z.year}-${z.month}-${z.day}`;
+    const frame = this.frame;
+    this.shadowRoot.innerHTML = `
+      <style>${FRAME_CSS}${this.themeCSS()}${this.constructor.styles}</style>
+      <div class="frame frame--${frame}" part="frame">
+        <div class="bezel" part="bezel">
+          <div class="screen" part="screen">${this.template(z)}</div>
+        </div>
+      </div>`;
+    this.$ = (sel) => this.shadowRoot.querySelector(sel);
+    this.$$ = (sel) => this.shadowRoot.querySelectorAll(sel);
+    this.update(z, true);
+    this.#label(z);
+  }
+  template() {
+    return "";
+  }
+  update() {
+  }
+  /** Accessible description. Subclasses return a sentence. */
+  describe() {
+    return "";
+  }
+  #label(z) {
+    const text = this.describe(z);
+    if (!text || this.#authorLabel || this.getAttribute("aria-label") === text) return;
+    this.setAttribute("aria-label", text);
+    this.dataset.bezelLabel = "";
+  }
+  #tick = (ms) => {
+    const z = zoned(ms, this.timeZone);
+    const dayKey = `${z.year}-${z.month}-${z.day}`;
+    if (dayKey !== this.#lastDayKey) {
+      this.render();
+      return;
+    }
+    this.update(z, false);
+    if (z.seconds === 0 && z.millis < 1e3) this.#label(z);
+  };
+  #resubscribe() {
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
+    let rate = this.tickRate;
+    if (!rate || !this.#visible) return;
+    if (rate === "frame" && this.reducedMotion) rate = "second";
+    this.#unsubscribe = subscribe(rate, this.#tick);
+  }
+  #watchVisibility() {
+    if (this.#observer || typeof IntersectionObserver === "undefined") return;
+    this.#observer = new IntersectionObserver((entries) => {
+      const visible = entries.some((e) => e.isIntersecting);
+      if (visible === this.#visible) return;
+      this.#visible = visible;
+      if (visible) {
+        this.update(this.now(), false);
+      }
+      this.#resubscribe();
+    });
+    this.#observer.observe(this);
+  }
+};
+function define(tag, ctor) {
+  if (typeof customElements !== "undefined" && !customElements.get(tag)) customElements.define(tag, ctor);
+}
+
+// src/tiles/clock.js
+var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic"]);
+var DEFAULT_THEME = { numerals: "sage", relief: "blush", classic: "porcelain" };
+var C = 50;
+function hand({ cls, stem, length, width, tail = 0 }) {
+  const stemLine = stem ? `<line x1="${C}" y1="${C}" x2="${C}" y2="${C - stem}" stroke-width="${Math.max(0.9, width * 0.32)}" />` : "";
+  return `<g class="hand ${cls}">
+    ${stemLine}
+    <line x1="${C}" y1="${stem ? C - stem : C + tail}" x2="${C}" y2="${C - length}" stroke-width="${width}" />
+  </g>`;
+}
+function secondHand(length, tail) {
+  return `<g class="hand second">
+    <line x1="${C}" y1="${C + tail}" x2="${C}" y2="${C - length}" stroke-width="0.55" />
+  </g>`;
+}
+var DEFS = (
+  /* svg */
+  `
+<defs>
+  <filter id="lift" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+    <feDropShadow dx="0" dy="0.45" stdDeviation="0.55" flood-color="#000" flood-opacity="0.28" />
+  </filter>
+  <filter id="deboss" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feFlood class="shade" result="shade" />
+    <feComposite in="shade" in2="SourceAlpha" operator="out" result="outside" />
+    <feOffset in="outside" dx="0.35" dy="0.45" result="shifted" />
+    <feGaussianBlur in="shifted" stdDeviation="0.28" result="soft" />
+    <feComposite in="soft" in2="SourceAlpha" operator="in" result="inner" />
+    <feFlood class="glint" result="glint" />
+    <feComposite in="glint" in2="SourceAlpha" operator="in" result="glyph" />
+    <feOffset in="glyph" dx="0.28" dy="0.34" result="glintShift" />
+    <feGaussianBlur in="glintShift" stdDeviation="0.12" result="glintSoft" />
+    <feMerge>
+      <feMergeNode in="glintSoft" />
+      <feMergeNode in="SourceGraphic" />
+      <feMergeNode in="inner" />
+    </feMerge>
+  </filter>
+</defs>`
+);
+var BezelClock = class _BezelClock extends BezelElement {
+  static attributes = ["variant", "hide-seconds", "hide-date", "sweep"];
+  static themes = {
+    sage: { surface: "#5C9268", ink: "#0A0C0A", hand: "#FFFFFF", accent: "#E3F4E6" },
+    cobalt: { surface: "#2D4BD2", ink: "#F3F5FF", hand: "#FFFFFF", accent: "#FFD43B" },
+    ember: { surface: "#E25A2C", ink: "#1A0E09", hand: "#FFF6EF", accent: "#FFF6EF" },
+    graphite: { surface: "#121315", ink: "#F2F2F0", hand: "#F2F2F0", accent: "#FF6B35" },
+    blush: { surface: "#E7C8C2", ink: "#5A2A26", hand: "#6E2B27", accent: "#E8409E" },
+    stone: { surface: "#D9DADC", ink: "#2B2D31", hand: "#25272B", accent: "#FF5A1F" },
+    midnight: { surface: "#1B1F27", ink: "#E9E3D6", hand: "#E9E3D6", accent: "#FFB547" },
+    porcelain: { surface: "#F4F4F2", ink: "#17181A", hand: "#17181A", accent: "#FF5A1F" }
+  };
+  static styles = (
+    /* css */
+    `
+    .face { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+    .hand line { stroke: var(--_hand); stroke-linecap: round; }
+    .hand.second line { stroke: var(--_accent); }
+    .hands { filter: url(#lift); }
+    .hub { fill: var(--_hand); }
+    .hub-ring { fill: none; stroke: var(--_accent); stroke-width: 0.55; }
+    .hub-pin { fill: var(--_surface); }
+    .numeral { font-family: var(--_font); fill: var(--_ink); font-variant-numeric: lining-nums proportional-nums; }
+
+    /* numerals */
+    .v-numerals .numeral { font-weight: var(--bezel-numeral-weight, 300); letter-spacing: -0.035em; }
+    .v-numerals .date { font-weight: 650; fill: var(--_ink); font-size: 4.3px; letter-spacing: 0.02em; }
+
+    /* relief */
+    .v-relief .numeral { fill: color-mix(in srgb, var(--_surface), #000 5%); filter: url(#deboss); font-weight: 500; letter-spacing: -0.02em; transition: opacity .9s ease, font-size .9s ease; }
+    .v-relief .shade { flood-color: color-mix(in srgb, var(--_surface), #000 55%); flood-opacity: .55; }
+    .v-relief .glint { flood-color: color-mix(in srgb, var(--_surface), #fff 70%); flood-opacity: .9; }
+    .v-relief .date { display: none; }
+
+    /* classic */
+    .tick { stroke: var(--_ink); stroke-linecap: round; }
+    .tick.minor { stroke-width: 0.35; opacity: .45; }
+    .tick.major { stroke-width: 0.9; }
+    .v-classic .numeral { font-weight: 560; font-size: 8.2px; }
+    .v-classic .date { font-weight: 650; fill: var(--_accent); font-size: 3.6px; letter-spacing: 0.08em; }
+
+    .screen { background:
+      radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
+  `
+  );
+  #reliefSecond = -1;
+  #dateMinute = -1;
+  get variant() {
+    const v = this.getAttribute("variant");
+    return VARIANTS.has(v) ? v : "numerals";
+  }
+  get themeName() {
+    const t = this.getAttribute("theme");
+    return t && _BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
+  }
+  get showSeconds() {
+    return !this.flag("hide-seconds");
+  }
+  get tickRate() {
+    if (!this.showSeconds) return "second";
+    return this.getAttribute("sweep") === "tick" ? "second" : "frame";
+  }
+  template(z) {
+    const v = this.variant;
+    let dial = "";
+    if (v === "numerals") {
+      dial = `
+        <g class="numerals">
+          <text class="numeral" x="49" y="45.5" font-size="52" text-anchor="middle">12</text>
+          <text class="numeral" x="19.5" y="68.5" font-size="52" text-anchor="middle">9</text>
+          <text class="numeral" x="80.5" y="68.5" font-size="52" text-anchor="middle">3</text>
+          <text class="numeral" x="50" y="95" font-size="52" text-anchor="middle">6</text>
+        </g>
+        <text class="date" x="7" y="93.5"></text>`;
+    } else if (v === "relief") {
+      dial = `<g class="ring">${Array.from({ length: 12 }, (_, i) => {
+        const deg = i * 30;
+        const rad = deg * Math.PI / 180;
+        const x = (C + Math.sin(rad) * 35).toFixed(2);
+        const y = (C - Math.cos(rad) * 35).toFixed(2);
+        const turn = deg > 90 && deg < 270 ? deg - 180 : deg;
+        return `<text class="numeral" data-h="${i || 12}" text-anchor="middle" dominant-baseline="central" font-size="15" transform="rotate(${turn} ${x} ${y})" x="${x}" y="${y}">${i || 12}</text>`;
+      }).join("")}</g>`;
+    } else {
+      const ticks = Array.from({ length: 60 }, (_, i) => {
+        const major = i % 5 === 0;
+        const r1 = major ? 41 : 43;
+        return `<line class="tick ${major ? "major" : "minor"}" x1="${C}" y1="${C - r1}" x2="${C}" y2="${C - 45.2}" transform="rotate(${i * 6} ${C} ${C})" />`;
+      }).join("");
+      const nums = Array.from({ length: 12 }, (_, i) => {
+        const h = i + 1;
+        const a = h * 30 * Math.PI / 180;
+        const x = C + Math.sin(a) * 33.5;
+        const y = C - Math.cos(a) * 33.5;
+        return `<text class="numeral" x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="central">${h}</text>`;
+      }).join("");
+      dial = `${ticks}${nums}<text class="date" x="${C}" y="${C + 16}" text-anchor="middle"></text>`;
+    }
+    const heavy = v === "classic" ? 2.2 : 3.1;
+    const hands = `
+      <g class="hands">
+        ${hand({ cls: "hour", stem: 6, length: v === "classic" ? 22 : 27, width: heavy })}
+        ${hand({ cls: "minute", stem: 6, length: v === "classic" ? 36 : 40, width: heavy })}
+        ${this.showSeconds ? secondHand(v === "classic" ? 42 : 46, 8) : ""}
+        <circle class="hub" cx="${C}" cy="${C}" r="1.7" />
+        ${this.showSeconds ? `<circle class="hub-ring" cx="${C}" cy="${C}" r="1.15" />` : ""}
+        <circle class="hub-pin" cx="${C}" cy="${C}" r="0.55" />
+      </g>`;
+    return `<svg class="face v-${v}" viewBox="0 0 100 100" aria-hidden="true">${DEFS}${dial}${hands}</svg>`;
+  }
+  update(z, first) {
+    const smooth = this.tickRate === "frame";
+    const a = handAngles(z, { smooth });
+    this.$(".hour")?.setAttribute("transform", `rotate(${a.hour.toFixed(3)} ${C} ${C})`);
+    this.$(".minute")?.setAttribute("transform", `rotate(${a.minute.toFixed(3)} ${C} ${C})`);
+    this.$(".second")?.setAttribute("transform", `rotate(${a.second.toFixed(3)} ${C} ${C})`);
+    if (first || z.minutes !== this.#dateMinute) {
+      this.#dateMinute = z.minutes;
+      const date = this.$(".date");
+      if (date && !this.flag("hide-date")) {
+        const wd = names(this.locale).weekdayShort[z.weekday].replace(".", "").toLocaleUpperCase(this.locale);
+        date.textContent = `${wd} ${z.day}`;
+      }
+    }
+    if (this.variant === "relief" && (first || z.seconds !== this.#reliefSecond)) {
+      this.#reliefSecond = z.seconds;
+      this.#relief(a.minute);
+    }
+  }
+  /** Numerals near the minute hand rise to full size; the rest recede into the surface. */
+  #relief(minuteAngle) {
+    const pos = minuteAngle / 30;
+    for (const el of this.$$(".numeral")) {
+      const h = Number(el.dataset.h) % 12;
+      let d = Math.abs(h - pos);
+      d = Math.min(d, 12 - d);
+      const t = Math.min(1, Math.max(0, (d - 1.2) / 2.6));
+      const ease = t * t * (3 - 2 * t);
+      el.style.opacity = (1 - ease).toFixed(3);
+      el.setAttribute("font-size", (16.5 - ease * 5).toFixed(2));
+    }
+  }
+  describe(z) {
+    const time = new Intl.DateTimeFormat(this.locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: this.hour12,
+      timeZone: this.timeZone
+    }).format(z.ms);
+    return `Clock showing ${time}`;
+  }
+};
+define("bezel-clock", BezelClock);
+
+// src/core/calendar.js
+var calendar_exports = {};
+__export(calendar_exports, {
+  daysInMonth: () => daysInMonth,
+  monthGrid: () => monthGrid,
+  parseMonth: () => parseMonth,
+  weekdayOrder: () => weekdayOrder
+});
+function daysInMonth(year, month) {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+function monthGrid(year, month, { weekStart = 1, fixedRows = false, fillAdjacent = true } = {}) {
+  const firstDow = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const lead = (firstDow - weekStart + 7) % 7;
+  const total = daysInMonth(year, month);
+  const rows = fixedRows ? 6 : Math.ceil((lead + total) / 7);
+  const weeks = [];
+  for (let r = 0; r < rows; r++) {
+    const week = [];
+    for (let c = 0; c < 7; c++) {
+      const offset = r * 7 + c - lead;
+      const d = new Date(Date.UTC(year, month, 1 + offset));
+      const inMonth = offset >= 0 && offset < total;
+      week.push(
+        inMonth || fillAdjacent ? { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate(), inMonth } : null
+      );
+    }
+    weeks.push(week);
+  }
+  return weeks;
+}
+function weekdayOrder(weekStart = 1) {
+  return Array.from({ length: 7 }, (_, i) => (weekStart + i) % 7);
+}
+function parseMonth(value) {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(String(value ?? "").trim());
+  if (!m) return null;
+  const month = Number(m[2]) - 1;
+  if (month < 0 || month > 11) return null;
+  return { year: Number(m[1]), month };
+}
+
+// src/tiles/calendar.js
+var BezelCalendar = class extends BezelElement {
+  static attributes = ["week-start", "month", "hide-time", "hide-backdrop"];
+  static defaultTheme = "snow";
+  static themes = {
+    snow: { surface: "#FBFBFD", ink: "#1F3E8C", accent: "#E5484D", today: "#121A33", muted: "#B9C0D2" },
+    ink: { surface: "#101216", ink: "#E8ECF4", accent: "#FF5F57", today: "#FFFFFF", muted: "#4A5160" },
+    sorbet: { surface: "#FFE8D6", ink: "#5B2A86", accent: "#FF7A45", today: "#2A1240", muted: "#D9B8C4" },
+    forest: { surface: "#E7EFE6", ink: "#21412F", accent: "#2F9E5B", today: "#0F2419", muted: "#A9BCAD" }
+  };
+  static styles = (
+    /* css */
+    `
+    .cal {
+      position: absolute; inset: 0;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      padding: 8.5cqw 7.5cqw 7cqw;
+      gap: 2.6cqw;
+    }
+    .head { display: flex; justify-content: space-between; align-items: baseline; font-size: 6.4cqw; font-weight: 640; letter-spacing: -0.01em; color: var(--_accent); position: relative; z-index: 1; }
+    .time { font-variant-numeric: tabular-nums; }
+    .row { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; position: relative; z-index: 1; }
+    .dow { font-size: 5.4cqw; font-weight: 680; color: var(--_ink); }
+    .dow .wkend { color: var(--_ink); }
+    .grid { display: grid; grid-template-rows: repeat(6, 1fr); align-items: center; position: relative; z-index: 1; }
+    .d { display: grid; place-items: center; font-size: 5.7cqw; font-weight: 640; color: var(--_ink); font-variant-numeric: tabular-nums; }
+    .d span { display: grid; place-items: center; inline-size: 9.4cqw; aspect-ratio: 1; border-radius: 50%; }
+    .d.out { color: var(--_muted); }
+    .d.today span { background: var(--_today); color: var(--_surface); box-shadow: 0 0.6cqw 1.6cqw -0.4cqw color-mix(in srgb, var(--_today), transparent 40%); }
+    .backdrop {
+      position: absolute; inset: 0; z-index: 0;
+      display: grid; place-items: center;
+      padding-block-start: 12cqh;
+      font-size: var(--bd-size, 82cqh); line-height: 1; font-weight: 760; letter-spacing: -0.07em;
+      color: var(--_accent);
+      opacity: var(--bd-opacity, .9);
+      font-variant-numeric: lining-nums;
+      -webkit-mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
+              mask-image: linear-gradient(180deg, #000 40%, rgba(0,0,0,.35) 78%, transparent 100%);
+    }
+  `
+  );
+  get tickRate() {
+    return this.flag("hide-time") ? "minute" : "second";
+  }
+  template(z) {
+    const pinned = parseMonth(this.getAttribute("month"));
+    const year = pinned?.year ?? z.year;
+    const month = pinned?.month ?? z.month;
+    const weekStart = parseWeekStart(this.getAttribute("week-start"), this.locale);
+    const n = names(this.locale);
+    const isCurrent = year === z.year && month === z.month;
+    const dows = weekdayOrder(weekStart).map((d) => `<div class="dow">${esc(n.weekdayNarrow[d])}</div>`).join("");
+    const weeks = monthGrid(year, month, { weekStart, fixedRows: true }).map(
+      (w) => w.map((c) => {
+        const today = c.inMonth && isCurrent && c.day === z.day;
+        return `<div class="d${c.inMonth ? "" : " out"}${today ? " today" : ""}"><span>${c.day}</span></div>`;
+      }).join("")
+    ).map((r) => `<div class="row">${r}</div>`).join("");
+    const monthLabel = new Intl.DateTimeFormat(this.locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      Date.UTC(year, month, 15)
+    );
+    return `
+      ${this.flag("hide-backdrop") || !isCurrent ? "" : `<div class="backdrop" aria-hidden="true"${z.day > 9 ? ' style="--bd-size:60cqw;--bd-opacity:.78"' : ""}>${z.day}</div>`}
+      <div class="cal" aria-hidden="true">
+        <div class="head"><span>${esc(monthLabel)}</span>${this.flag("hide-time") ? "" : '<span class="time"></span>'}</div>
+        <div class="row">${dows}</div>
+        <div class="grid">${weeks}</div>
+      </div>`;
+  }
+  update(z) {
+    const t = this.$(".time");
+    if (t) {
+      const text = formatClock(z.hours, z.minutes, this.hour12);
+      if (t.textContent !== text) t.textContent = text;
+    }
+  }
+  describe(z) {
+    const date = new Intl.DateTimeFormat(this.locale, { dateStyle: "full", timeZone: "UTC" }).format(Date.UTC(z.year, z.month, z.day));
+    return `Calendar. Today is ${date}`;
+  }
+};
+define("bezel-calendar", BezelCalendar);
+
+// src/core/icons.js
+var wrap = (body, cls = "") => `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+var sunCore = '<circle cx="12" cy="12" r="4.2"/>';
+var rays = [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<line x1="12" y1="2.6" x2="12" y2="4.6" transform="rotate(${a} 12 12)"/>`).join("");
+var cloud = "M7.2 18.5h9.6a3.9 3.9 0 0 0 .5-7.77A5.4 5.4 0 0 0 6.9 10.2 4.2 4.2 0 0 0 7.2 18.5Z";
+var smallCloud = "M8.4 19h8.2a3.3 3.3 0 0 0 .4-6.58 4.6 4.6 0 0 0-8.9-1.1A3.85 3.85 0 0 0 8.4 19Z";
+var icons = {
+  sun: () => wrap(sunCore + rays),
+  moon: () => wrap('<path d="M19.2 14.6A7.6 7.6 0 0 1 9.4 4.8a7.6 7.6 0 1 0 9.8 9.8Z"/>'),
+  partly: (isDay = true) => wrap(
+    (isDay ? '<circle cx="8.6" cy="8.4" r="3.2"/><line x1="8.6" y1="2.4" x2="8.6" y2="3.4"/><line x1="2.6" y1="8.4" x2="3.6" y2="8.4"/><line x1="4.4" y1="4.2" x2="5.1" y2="4.9"/><line x1="12.8" y1="4.2" x2="12.1" y2="4.9"/>' : '<path d="M11.6 9.6A4.4 4.4 0 0 1 6 4a4.4 4.4 0 1 0 5.6 5.6Z"/>') + `<path d="${smallCloud}"/>`
+  ),
+  cloudy: () => wrap(`<path d="${cloud}"/>`),
+  fog: () => wrap('<line x1="4" y1="9" x2="20" y2="9"/><line x1="6" y1="13" x2="18" y2="13"/><line x1="4" y1="17" x2="20" y2="17"/>'),
+  drizzle: () => wrap(`<path d="${cloud}" transform="translate(0 -3)"/><line x1="9" y1="19" x2="8.5" y2="20.5"/><line x1="15" y1="19" x2="14.5" y2="20.5"/>`),
+  rain: () => wrap(`<path d="${cloud}" transform="translate(0 -3)"/><line x1="8" y1="18.5" x2="7" y2="21"/><line x1="12" y1="18.5" x2="11" y2="21"/><line x1="16" y1="18.5" x2="15" y2="21"/>`),
+  snow: () => wrap(`<path d="${cloud}" transform="translate(0 -3)"/><circle cx="8" cy="19.6" r=".5" fill="currentColor"/><circle cx="12" cy="20.6" r=".5" fill="currentColor"/><circle cx="16" cy="19.6" r=".5" fill="currentColor"/>`),
+  storm: () => wrap(`<path d="${cloud}" transform="translate(0 -3)"/><path d="M12.6 15.4 10.6 18.6h3l-2 3"/>`),
+  sunrise: () => wrap('<path d="M6.5 16a5.5 5.5 0 0 1 11 0"/><line x1="3" y1="19" x2="21" y2="19"/><path d="M12 3v6M9.5 5.5 12 3l2.5 2.5"/><line x1="4.2" y1="11.2" x2="5.4" y2="12"/><line x1="19.8" y1="11.2" x2="18.6" y2="12"/>'),
+  sunset: () => wrap('<path d="M6.5 16a5.5 5.5 0 0 1 11 0"/><line x1="3" y1="19" x2="21" y2="19"/><path d="M12 3v6M9.5 6.5 12 9l2.5-2.5"/><line x1="4.2" y1="11.2" x2="5.4" y2="12"/><line x1="19.8" y1="11.2" x2="18.6" y2="12"/>'),
+  wind: () => wrap('<path d="M3 9h11.5a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h15.5a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 17h7"/>'),
+  humidity: () => wrap('<path d="M12 3.2s-6 6.6-6 10.8a6 6 0 0 0 12 0c0-4.2-6-10.8-6-10.8Z"/><path d="M9.2 14.6a2.9 2.9 0 0 0 2.4 2.6"/>'),
+  air: () => wrap(
+    [
+      [6, 7],
+      [12, 7],
+      [18, 7],
+      [9, 12],
+      [15, 12],
+      [6, 17],
+      [12, 17],
+      [18, 17]
+    ].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.15" fill="currentColor" stroke="none"/>`).join("")
+  ),
+  arrow: () => '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5 3.8 10.6l7.4 2.2 2.2 7.4Z" fill="currentColor"/></svg>'
+};
+function skyIcon(sky, isDay = true) {
+  switch (sky) {
+    case "clear":
+      return isDay ? icons.sun() : icons.moon();
+    case "partly":
+      return icons.partly(isDay);
+    case "fog":
+      return icons.fog();
+    case "drizzle":
+      return icons.drizzle();
+    case "rain":
+      return icons.rain();
+    case "snow":
+      return icons.snow();
+    case "storm":
+      return icons.storm();
+    default:
+      return icons.cloudy();
+  }
+}
+
+// src/core/weather.js
+var weather_exports = {};
+__export(weather_exports, {
+  DEFAULT_PLACE: () => DEFAULT_PLACE,
+  _resetWeatherCache: () => _resetWeatherCache,
+  aqiBand: () => aqiBand,
+  defaultUnits: () => defaultUnits,
+  describeCode: () => describeCode,
+  geocode: () => geocode,
+  getWeather: () => getWeather,
+  isoClock: () => isoClock,
+  nextSunEvent: () => nextSunEvent,
+  normalise: () => normalise,
+  resolveAndFetch: () => resolveAndFetch,
+  sampleWeather: () => sampleWeather
+});
+var FORECAST = "https://api.open-meteo.com/v1/forecast";
+var AIR = "https://air-quality-api.open-meteo.com/v1/air-quality";
+var GEOCODE = "https://geocoding-api.open-meteo.com/v1/search";
+var DEFAULT_PLACE = { name: "London", latitude: 51.5072, longitude: -0.1276 };
+var TTL = 15 * 6e4;
+var cache = /* @__PURE__ */ new Map();
+var geoCache = /* @__PURE__ */ new Map();
+var WMO = {
+  0: ["Clear", "clear"],
+  1: ["Mostly Clear", "clear"],
+  2: ["Partly Cloudy", "partly"],
+  3: ["Overcast", "cloudy"],
+  45: ["Fog", "fog"],
+  48: ["Freezing Fog", "fog"],
+  51: ["Light Drizzle", "drizzle"],
+  53: ["Drizzle", "drizzle"],
+  55: ["Heavy Drizzle", "drizzle"],
+  56: ["Freezing Drizzle", "drizzle"],
+  57: ["Freezing Drizzle", "drizzle"],
+  61: ["Light Rain", "rain"],
+  63: ["Rain", "rain"],
+  65: ["Heavy Rain", "rain"],
+  66: ["Freezing Rain", "rain"],
+  67: ["Freezing Rain", "rain"],
+  71: ["Light Snow", "snow"],
+  73: ["Snow", "snow"],
+  75: ["Heavy Snow", "snow"],
+  77: ["Snow Grains", "snow"],
+  80: ["Showers", "rain"],
+  81: ["Showers", "rain"],
+  82: ["Heavy Showers", "rain"],
+  85: ["Snow Showers", "snow"],
+  86: ["Snow Showers", "snow"],
+  95: ["Thunderstorm", "storm"],
+  96: ["Thunderstorm", "storm"],
+  99: ["Thunderstorm", "storm"]
+};
+function describeCode(code) {
+  const [label, sky] = WMO[code] ?? ["Unknown", "cloudy"];
+  return { label, sky };
+}
+var IMPERIAL_REGIONS = /* @__PURE__ */ new Set(["US", "LR", "MM", "BS", "BZ", "KY", "PW", "FM", "MH"]);
+function defaultUnits(locale = "en-GB") {
+  try {
+    const region = new Intl.Locale(locale).maximize().region;
+    return IMPERIAL_REGIONS.has(region) ? "imperial" : "metric";
+  } catch {
+    return "metric";
+  }
+}
+function aqiBand(value, scale = "eu") {
+  if (value == null || Number.isNaN(value)) return "";
+  const bands = scale === "us" ? [[50, "Good"], [100, "Moderate"], [150, "Unhealthy for some"], [200, "Unhealthy"], [300, "Very unhealthy"], [Infinity, "Hazardous"]] : [[20, "Good"], [40, "Fair"], [60, "Moderate"], [80, "Poor"], [100, "Very poor"], [Infinity, "Extremely poor"]];
+  return bands.find(([max]) => value <= max)[1];
+}
+function normalise(forecast, air, { units = "metric", place = "" } = {}) {
+  const c = forecast.current ?? {};
+  const daily = forecast.daily ?? {};
+  const { label, sky } = describeCode(c.weather_code);
+  const scale = units === "imperial" ? "us" : "eu";
+  const aqi = air?.current ? air.current[scale === "us" ? "us_aqi" : "european_aqi"] : null;
+  return {
+    sample: false,
+    place,
+    units,
+    time: c.time ?? null,
+    // location-local ISO, e.g. "2026-10-22T13:00"
+    temperature: c.temperature_2m,
+    apparent: c.apparent_temperature ?? null,
+    humidity: c.relative_humidity_2m,
+    wind: c.wind_speed_10m,
+    windDirection: c.wind_direction_10m ?? null,
+    code: c.weather_code,
+    condition: label,
+    sky,
+    isDay: c.is_day !== 0,
+    high: daily.temperature_2m_max?.[0],
+    low: daily.temperature_2m_min?.[0],
+    sunrise: daily.sunrise ?? [],
+    sunset: daily.sunset ?? [],
+    aqi: aqi == null ? null : Math.round(aqi),
+    aqiScale: scale,
+    utcOffsetSeconds: forecast.utc_offset_seconds ?? 0,
+    timezone: forecast.timezone ?? null
+  };
+}
+function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
+  const f = (cDeg) => units === "imperial" ? Math.round(cDeg * 1.8 + 32) : cDeg;
+  const today = /* @__PURE__ */ new Date();
+  const iso = (h, m) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return {
+    sample: true,
+    place,
+    units,
+    time: null,
+    temperature: f(14),
+    apparent: f(12),
+    humidity: 76,
+    wind: units === "imperial" ? 7 : 11,
+    windDirection: 240,
+    code: 2,
+    condition: "Partly Cloudy",
+    sky: "partly",
+    isDay: true,
+    high: f(16),
+    low: f(9),
+    sunrise: [iso(7, 31)],
+    sunset: [iso(17, 52)],
+    aqi: units === "imperial" ? 21 : 18,
+    aqiScale: units === "imperial" ? "us" : "eu",
+    utcOffsetSeconds: 0,
+    timezone: null
+  };
+}
+async function getJSON(url, signal) {
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function geocode(name) {
+  const key = name.trim().toLowerCase();
+  if (!geoCache.has(key)) {
+    const url = `${GEOCODE}?name=${encodeURIComponent(name.trim())}&count=1&format=json`;
+    geoCache.set(
+      key,
+      getJSON(url).then((json) => {
+        const r = json.results?.[0];
+        if (!r) throw new Error(`No place called "${name}"`);
+        return { name: r.name, latitude: r.latitude, longitude: r.longitude, timezone: r.timezone };
+      }).catch((err) => {
+        geoCache.delete(key);
+        throw err;
+      })
+    );
+  }
+  return geoCache.get(key);
+}
+function getWeather({ latitude, longitude, units = "metric", place = "" }) {
+  const key = `${latitude.toFixed(3)},${longitude.toFixed(3)},${units}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.promise;
+  const imperial = units === "imperial";
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    current: "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day",
+    daily: "temperature_2m_max,temperature_2m_min,sunrise,sunset",
+    timezone: "auto",
+    forecast_days: "2",
+    temperature_unit: imperial ? "fahrenheit" : "celsius",
+    wind_speed_unit: imperial ? "mph" : "kmh"
+  });
+  const airParams = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    current: "european_aqi,us_aqi"
+  });
+  const promise = Promise.all([
+    getJSON(`${FORECAST}?${params}`),
+    getJSON(`${AIR}?${airParams}`).catch(() => null)
+  ]).then(([forecast, air]) => normalise(forecast, air, { units, place })).catch((err) => {
+    cache.delete(key);
+    console.warn(`[bezel] Weather unavailable (${err.message}). Showing sample data.`);
+    return sampleWeather({ units, place });
+  });
+  cache.set(key, { at: Date.now(), promise });
+  return promise;
+}
+async function resolveAndFetch({ latitude, longitude, location, units }) {
+  const lat = parseFloat(latitude);
+  const lon = parseFloat(longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    return getWeather({ latitude: lat, longitude: lon, units, place: location || "" });
+  }
+  if (location) {
+    try {
+      const p = await geocode(location);
+      return getWeather({ latitude: p.latitude, longitude: p.longitude, units, place: p.name });
+    } catch (err) {
+      console.warn(`[bezel] ${err.message}. Showing sample data.`);
+      return sampleWeather({ units, place: location });
+    }
+  }
+  return getWeather({ ...DEFAULT_PLACE, units, place: DEFAULT_PLACE.name });
+}
+function nextSunEvent(w, nowIso) {
+  const now = nowIso ?? w.time ?? "";
+  const events = [
+    ...w.sunrise.map((t) => ({ kind: "sunrise", time: t })),
+    ...w.sunset.map((t) => ({ kind: "sunset", time: t }))
+  ].sort((a, b) => a.time.localeCompare(b.time));
+  return events.find((e) => e.time > now) ?? events.find((e) => e.kind === "sunset") ?? null;
+}
+function isoClock(iso, hour12) {
+  const m = /T(\d{2}):(\d{2})/.exec(iso ?? "");
+  if (!m) return "--:--";
+  const h = Number(m[1]);
+  return hour12 ? `${h % 12 || 12}:${m[2]}` : `${m[1]}:${m[2]}`;
+}
+function _resetWeatherCache() {
+  cache.clear();
+  geoCache.clear();
+}
+
+// src/core/weather-source.js
+var WEATHER_ATTRIBUTES = ["latitude", "longitude", "location", "units", "refresh"];
+var WeatherSource = class {
+  data = null;
+  #host;
+  #timer = 0;
+  #request = 0;
+  #manual = false;
+  constructor(host) {
+    this.#host = host;
+  }
+  get units() {
+    const u = this.#host.getAttribute("units");
+    return u === "imperial" || u === "metric" ? u : defaultUnits(this.#host.locale);
+  }
+  start() {
+    if (this.#manual) return;
+    this.load();
+  }
+  stop() {
+    clearTimeout(this.#timer);
+    this.#timer = 0;
+  }
+  /** Supply data directly (for custom sources or offline use). */
+  set(data) {
+    this.#manual = data != null;
+    this.stop();
+    this.data = data;
+    this.#host.invalidate();
+  }
+  async load() {
+    this.stop();
+    const id = ++this.#request;
+    const h = this.#host;
+    const data = await resolveAndFetch({
+      latitude: h.getAttribute("latitude"),
+      longitude: h.getAttribute("longitude"),
+      location: h.getAttribute("location"),
+      units: this.units
+    });
+    if (id !== this.#request || this.#manual) return;
+    this.data = data;
+    h.invalidate();
+    h.dispatchEvent(new CustomEvent("bezel-weather", { detail: data, bubbles: true, composed: true }));
+    const minutes = Math.max(5, parseFloat(h.getAttribute("refresh")) || 15);
+    this.#timer = setTimeout(() => this.load(), data.sample ? 6e4 : minutes * 6e4);
+  }
+};
+
+// src/tiles/weather.js
+var SKIES = {
+  "clear-day": ["#1F6FCF", "#4F9BE6", "#A9D3F5"],
+  "clear-night": ["#070D22", "#14224A", "#2B3F73"],
+  "partly-day": ["#3779C8", "#6EA6DF", "#B8D6F0"],
+  "partly-night": ["#0E1630", "#1E2C52", "#37466E"],
+  "cloudy-day": ["#5D7186", "#8A9CAE", "#B9C5D0"],
+  "cloudy-night": ["#141A24", "#262F3D", "#3C4657"],
+  "fog-day": ["#7F8A95", "#A6AFB7", "#CDD2D6"],
+  "fog-night": ["#1C2129", "#323843", "#4A515C"],
+  "drizzle-day": ["#4C6175", "#72879B", "#9AAABA"],
+  "drizzle-night": ["#121922", "#222D3A", "#344152"],
+  "rain-day": ["#3E5166", "#5E7389", "#8597A9"],
+  "rain-night": ["#0D131B", "#1C2633", "#2C3848"],
+  "snow-day": ["#7E93AA", "#AEBFCF", "#DCE5ED"],
+  "snow-night": ["#1D2636", "#36435A", "#56647C"],
+  "storm-day": ["#262B38", "#3E4456", "#5B6276"],
+  "storm-night": ["#0B0D13", "#1A1E29", "#2C3141"]
+};
+var CLOUDS = { clear: 0, partly: 3, cloudy: 6, fog: 0, drizzle: 6, rain: 6, snow: 5, storm: 6 };
+function cloudLayer(count, dim) {
+  const seeds = [
+    [52, 10, 62, 0.62, 52],
+    [-12, 22, 66, 0.55, 64],
+    [30, 34, 58, 0.42, 58],
+    [66, 48, 52, 0.38, 72],
+    [-6, 58, 56, 0.3, 60],
+    [40, 66, 60, 0.26, 80]
+  ];
+  return seeds.slice(0, count).map(
+    ([x, y, w, o, dur], i) => `<i class="cloud" style="--x:${x}cqw;--y:${y}cqh;--w:${w}cqw;--o:${(o * (dim ? 0.55 : 1)).toFixed(2)};--d:${dur}s;--delay:${-i * 7}s"></i>`
+  ).join("");
+}
+var BezelWeather = class extends BezelElement {
+  static attributes = [...WEATHER_ATTRIBUTES, "hide-time", "still"];
+  static defaultTheme = "sky";
+  static themes = { sky: { surface: "#4F9BE6", ink: "#FFFFFF", accent: "#FFFFFF" } };
+  static styles = (
+    /* css */
+    `
+    .sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, var(--s0) 0%, var(--s1) 55%, var(--s2) 100%); }
+    .sky::after { content: ""; position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(180deg, rgba(8,20,40,.30) 0%, rgba(8,20,40,.08) 30%, rgba(8,20,40,0) 52%, rgba(8,20,40,0) 70%, rgba(8,20,40,.18) 100%); }
+    .sun { position: absolute; inset-block-start: -22cqh; inset-inline-end: -18cqw; inline-size: 80cqw; aspect-ratio: 1; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,246,214,.75) 0%, rgba(255,226,150,.28) 26%, rgba(255,226,150,0) 62%); }
+    .stars { position: absolute; inset: 0; opacity: .8;
+      background-image:
+        radial-gradient(0.35cqw 0.35cqw at 12% 18%, #fff 50%, transparent 52%),
+        radial-gradient(0.25cqw 0.25cqw at 28% 9%, #fff 50%, transparent 52%),
+        radial-gradient(0.3cqw 0.3cqw at 47% 22%, #fff 50%, transparent 52%),
+        radial-gradient(0.22cqw 0.22cqw at 66% 12%, #fff 50%, transparent 52%),
+        radial-gradient(0.32cqw 0.32cqw at 84% 26%, #fff 50%, transparent 52%),
+        radial-gradient(0.2cqw 0.2cqw at 74% 40%, #fff 50%, transparent 52%),
+        radial-gradient(0.26cqw 0.26cqw at 18% 44%, #fff 50%, transparent 52%),
+        radial-gradient(0.2cqw 0.2cqw at 92% 8%, #fff 50%, transparent 52%);
+      animation: twinkle 6s ease-in-out infinite alternate; }
+    .cloud { position: absolute; inset-inline-start: var(--x); inset-block-start: var(--y); inline-size: var(--w); aspect-ratio: 2.2; opacity: var(--o);
+      background:
+        radial-gradient(38% 62% at 30% 62%, #fff 0 58%, transparent 72%),
+        radial-gradient(34% 70% at 55% 42%, #fff 0 56%, transparent 72%),
+        radial-gradient(30% 54% at 78% 64%, #fff 0 56%, transparent 72%),
+        radial-gradient(60% 40% at 52% 78%, #fff 0 60%, transparent 76%);
+      filter: blur(0.9cqw);
+      animation: drift var(--d) ease-in-out var(--delay) infinite alternate; }
+    .fogband { position: absolute; inset-inline: -20cqw; block-size: 18cqh; border-radius: 50%;
+      background: radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.55), transparent 70%);
+      filter: blur(1.5cqw); animation: drift 40s ease-in-out infinite alternate; }
+    .rain { position: absolute; inset: -20cqh 0 0; opacity: .38;
+      background-image: repeating-linear-gradient(104deg, transparent 0 2.6cqw, rgba(255,255,255,.75) 2.6cqw 2.75cqw, transparent 2.75cqw 5.2cqw);
+      -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 4cqh, transparent 4cqh 9cqh);
+              mask-image: repeating-linear-gradient(180deg, #000 0 4cqh, transparent 4cqh 9cqh);
+      animation: fall .55s linear infinite; }
+    .rain.light { opacity: .22; animation-duration: .9s; }
+    .snowfall { position: absolute; inset: -40cqh 0 0;
+      background-image:
+        radial-gradient(0.7cqw 0.7cqw at 20% 10%, rgba(255,255,255,.9) 50%, transparent 55%),
+        radial-gradient(0.5cqw 0.5cqw at 60% 30%, rgba(255,255,255,.85) 50%, transparent 55%),
+        radial-gradient(0.8cqw 0.8cqw at 80% 60%, rgba(255,255,255,.9) 50%, transparent 55%),
+        radial-gradient(0.55cqw 0.55cqw at 35% 75%, rgba(255,255,255,.8) 50%, transparent 55%);
+      background-size: 30cqw 30cqh;
+      animation: snow 9s linear infinite; }
+    .flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash 7s infinite; }
+    :host([still]) .sky * { animation: none !important; }
+    @keyframes drift { to { translate: 9cqw 0; } }
+    @keyframes fall { to { translate: -2.2cqw 9cqh; } }
+    @keyframes snow { to { translate: 3cqw 30cqh; } }
+    @keyframes twinkle { to { opacity: .45; } }
+    @keyframes flash { 0%, 91%, 93%, 95%, 100% { opacity: 0; } 92%, 94% { opacity: .35; } }
+
+    .content { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; padding: 8cqw 8cqw 7.5cqw;
+      text-shadow: 0 0.15cqw 0.6cqw rgba(0,0,0,.18), 0 0 2.4cqw rgba(0,0,0,.12); z-index: 3; }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 3cqw; }
+    .meta { display: grid; gap: 0.6cqw; font-size: 4.6cqw; font-weight: 600; line-height: 1.15; min-inline-size: 0; }
+    .meta .place { font-size: 5.2cqw; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meta .cond { display: flex; align-items: center; gap: 1.2cqw; opacity: .95; }
+    .meta .hl { opacity: .85; font-variant-numeric: tabular-nums; }
+    .meta .icon { inline-size: 5.2cqw; flex: none; }
+    .sample { font-weight: 600; font-size: 3.2cqw; letter-spacing: .06em; text-transform: uppercase; opacity: .7; margin-inline-start: 1cqw; }
+    .time { font-size: 6.2cqw; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+    .temp { align-self: center; font-size: 44cqw; font-weight: 200; letter-spacing: -0.055em; line-height: .9; margin-inline-start: -2.4cqw;
+      font-variant-numeric: lining-nums proportional-nums; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+    .stat { display: grid; justify-items: center; gap: 0.8cqw; min-inline-size: 0; }
+    .stat .icon { inline-size: 6.4cqw; opacity: .95; }
+    .stat b { font-size: 4.4cqw; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .stat b small { font-size: .72em; font-weight: 600; opacity: .85; margin-inline-start: .3em; }
+    .stat span { font-size: 3.5cqw; font-weight: 550; opacity: .82; }
+    .loading .temp, .loading .stats { opacity: .35; }
+  `
+  );
+  #source = new WeatherSource(this);
+  connected() {
+    this.#source.start();
+  }
+  disconnected() {
+    this.#source.stop();
+  }
+  attributeChanged(name) {
+    if (WEATHER_ATTRIBUTES.includes(name) && name !== "refresh") this.#source.start();
+  }
+  /** The current weather object, or assign one to drive the tile yourself. */
+  get weather() {
+    return this.#source.data;
+  }
+  set weather(data) {
+    this.#source.set(data);
+  }
+  get tickRate() {
+    return this.flag("hide-time") ? null : "second";
+  }
+  template() {
+    const w = this.#source.data;
+    const sky = w ? w.sky : "partly";
+    const isDay = w ? w.isDay : true;
+    const [s0, s1, s2] = SKIES[`${sky}-${isDay ? "day" : "night"}`] ?? SKIES["partly-day"];
+    const layers = [];
+    if (sky === "clear" && isDay) layers.push('<i class="sun"></i>');
+    if (!isDay && (sky === "clear" || sky === "partly")) layers.push('<i class="stars"></i>');
+    if (sky === "partly" && isDay) layers.push('<i class="sun" style="opacity:.7"></i>');
+    layers.push(cloudLayer(CLOUDS[sky] ?? 3, !isDay));
+    if (sky === "fog") layers.push('<i class="fogband" style="top:22cqh"></i><i class="fogband" style="top:52cqh;animation-delay:-12s"></i><i class="fogband" style="top:74cqh;animation-delay:-24s"></i>');
+    if (sky === "drizzle") layers.push('<i class="rain light"></i>');
+    if (sky === "rain" || sky === "storm") layers.push('<i class="rain"></i>');
+    if (sky === "snow") layers.push('<i class="snowfall"></i>');
+    if (sky === "storm") layers.push('<i class="flash"></i>');
+    const deg = (v) => v == null || Number.isNaN(v) ? "--" : `${Math.round(v)}\xB0`;
+    const place = w?.place || this.getAttribute("location") || "";
+    let stats = "";
+    if (w) {
+      const sun = nextSunEvent(w);
+      const windUnit = w.units === "imperial" ? "mph" : "km/h";
+      stats = `
+        <div class="stat">${sun?.kind === "sunrise" ? icons.sunrise() : icons.sunset()}<b class="num">${isoClock(sun?.time, this.hour12)}</b><span>${sun?.kind === "sunrise" ? "Sunrise" : "Sunset"}</span></div>
+        <div class="stat">${icons.wind()}<b class="num">${Math.round(w.wind ?? 0)}<small>${windUnit}</small></b><span>Wind</span></div>
+        <div class="stat">${icons.humidity()}<b class="num">${Math.round(w.humidity ?? 0)}%</b><span>Humidity</span></div>
+        <div class="stat">${icons.air()}<b class="num">${w.aqi ?? "--"}</b><span>AQI</span></div>`;
+    }
+    return `
+      <div class="sky" aria-hidden="true" style="--s0:${s0};--s1:${s1};--s2:${s2}">${layers.join("")}</div>
+      <div class="content${w ? "" : " loading"}" aria-hidden="true">
+        <div class="top">
+          <div class="meta">
+            <div class="place">${esc(place)}${w?.sample ? '<span class="sample">Sample</span>' : ""}</div>
+            <div class="cond">${skyIcon(sky, isDay)}<span>${esc(w ? w.condition : "Loading")}</span></div>
+            <div class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</div>
+          </div>
+          ${this.flag("hide-time") ? "" : '<div class="time"></div>'}
+        </div>
+        <div class="temp">${deg(w?.temperature)}</div>
+        <div class="stats">${stats}</div>
+      </div>`;
+  }
+  update(z) {
+    const t = this.$(".time");
+    if (!t) return;
+    const text = formatClock(z.hours, z.minutes, this.hour12);
+    if (t.textContent !== text) t.textContent = text;
+  }
+  describe() {
+    const w = this.#source.data;
+    if (!w) return "Weather, loading";
+    const aqi = w.aqi != null ? `, air quality ${aqiBand(w.aqi, w.aqiScale).toLowerCase()}` : "";
+    return `Weather${w.place ? ` in ${w.place}` : ""}: ${Math.round(w.temperature)} degrees, ${w.condition.toLowerCase()}, high ${Math.round(w.high)}, low ${Math.round(w.low)}${aqi}${w.sample ? " (sample data)" : ""}`;
+  }
+};
+define("bezel-weather", BezelWeather);
+
+// src/core/ics.js
+var ics_exports = {};
+__export(ics_exports, {
+  expandEvents: () => expandEvents,
+  normaliseEvents: () => normaliseEvents,
+  parseICS: () => parseICS,
+  parseICSDate: () => parseICSDate
+});
+var DAY = 864e5;
+var BYDAY = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+function unfold(text) {
+  return text.replace(/\r\n/g, "\n").replace(/\n[ \t]/g, "");
+}
+function unescapeText(value) {
+  return value.replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "$1");
+}
+function parseLine(line) {
+  const colon = line.search(/:(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+  if (colon < 0) return null;
+  const head = line.slice(0, colon);
+  const value = line.slice(colon + 1);
+  const [name, ...paramParts] = head.split(";");
+  const params = {};
+  for (const p of paramParts) {
+    const eq = p.indexOf("=");
+    if (eq > 0) params[p.slice(0, eq).toUpperCase()] = p.slice(eq + 1).replace(/^"|"$/g, "");
+  }
+  return { name: name.toUpperCase(), params, value };
+}
+function parseICSDate(value, params = {}, fallbackZone) {
+  const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/.exec(value.trim());
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s, z] = m;
+  if (h === void 0 || params.VALUE === "DATE") {
+    return { ms: zonedToUtc(+y, +mo - 1, +d, 0, 0, 0, fallbackZone), allDay: true, ymd: [+y, +mo - 1, +d] };
+  }
+  const parts = [+y, +mo - 1, +d, +h, +mi, +(s ?? 0)];
+  if (z) return { ms: Date.UTC(...parts), allDay: false };
+  const zone = params.TZID && !params.TZID.startsWith("/") ? params.TZID : fallbackZone;
+  let ms;
+  try {
+    ms = zonedToUtc(...parts, zone);
+  } catch {
+    ms = zonedToUtc(...parts, fallbackZone);
+  }
+  return { ms, allDay: false };
+}
+function parseRRule(value) {
+  const rule = {};
+  for (const part of value.split(";")) {
+    const [k, v] = part.split("=");
+    if (k && v) rule[k.toUpperCase()] = v;
+  }
+  return rule;
+}
+function parseICS(text, { timeZone } = {}) {
+  const events = [];
+  let current = null;
+  for (const raw of unfold(String(text ?? "")).split("\n")) {
+    const line = raw.trimEnd();
+    if (line === "BEGIN:VEVENT") {
+      current = { uid: "", title: "", location: "", start: null, end: null, allDay: false, rrule: null, exdates: /* @__PURE__ */ new Set(), recurrenceId: null, cancelled: false };
+      continue;
+    }
+    if (line === "END:VEVENT") {
+      if (current && current.start != null && !current.cancelled) {
+        if (current.end == null || current.end < current.start) {
+          current.end = current.start + (current.allDay ? DAY : 0);
+        }
+        events.push(current);
+      }
+      current = null;
+      continue;
+    }
+    if (!current) continue;
+    const prop = parseLine(line);
+    if (!prop) continue;
+    switch (prop.name) {
+      case "UID":
+        current.uid = prop.value;
+        break;
+      case "SUMMARY":
+        current.title = unescapeText(prop.value);
+        break;
+      case "LOCATION":
+        current.location = unescapeText(prop.value);
+        break;
+      case "STATUS":
+        current.cancelled = prop.value.toUpperCase() === "CANCELLED";
+        break;
+      case "DTSTART": {
+        const d = parseICSDate(prop.value, prop.params, timeZone);
+        if (d) {
+          current.start = d.ms;
+          current.allDay = d.allDay;
+        }
+        break;
+      }
+      case "DTEND": {
+        const d = parseICSDate(prop.value, prop.params, timeZone);
+        if (d) current.end = d.ms;
+        break;
+      }
+      case "DURATION": {
+        const m = /P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?/.exec(prop.value);
+        if (m && current.start != null) {
+          const [, w = 0, d = 0, h = 0, mi = 0, s = 0] = m.map((x) => x === void 0 ? 0 : +x);
+          current.end = current.start + (((+w * 7 + +d) * 24 + +h) * 60 + +mi) * 6e4 + +s * 1e3;
+        }
+        break;
+      }
+      case "RRULE":
+        current.rrule = parseRRule(prop.value);
+        break;
+      case "EXDATE":
+        for (const v of prop.value.split(",")) {
+          const d = parseICSDate(v, prop.params, timeZone);
+          if (d) current.exdates.add(d.ms);
+        }
+        break;
+      case "RECURRENCE-ID": {
+        const d = parseICSDate(prop.value, prop.params, timeZone);
+        if (d) current.recurrenceId = d.ms;
+        break;
+      }
+    }
+  }
+  return events;
+}
+function addMonthsUTC(ms, n) {
+  const d = new Date(ms);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  const max = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  if (day > max) return null;
+  d.setUTCDate(day);
+  return d.getTime();
+}
+function* occurrences(ev, until) {
+  const r = ev.rrule;
+  const freq = r.FREQ;
+  const interval = Math.max(1, parseInt(r.INTERVAL ?? "1", 10) || 1);
+  const count = r.COUNT ? parseInt(r.COUNT, 10) : Infinity;
+  const ruleUntil = r.UNTIL ? parseICSDate(r.UNTIL)?.ms ?? Infinity : Infinity;
+  const stop = Math.min(until, ruleUntil);
+  let emitted = 0;
+  const cap = 5e3;
+  if (freq === "WEEKLY" && r.BYDAY) {
+    const days = r.BYDAY.split(",").map((d) => BYDAY[d.slice(-2)]).filter((d) => d != null).sort();
+    const startDow = new Date(ev.start).getUTCDay();
+    const weekAnchor = ev.start - startDow * DAY;
+    for (let week = 0; week < cap && emitted < count; week += interval) {
+      for (const dow of days) {
+        const t = weekAnchor + week * 7 * DAY + dow * DAY;
+        if (t < ev.start) continue;
+        if (t > stop || emitted >= count) return;
+        emitted++;
+        yield t;
+      }
+    }
+    return;
+  }
+  for (let i = 0; i < cap && emitted < count; i++) {
+    let t;
+    if (freq === "DAILY") t = ev.start + i * interval * DAY;
+    else if (freq === "WEEKLY") t = ev.start + i * interval * 7 * DAY;
+    else if (freq === "MONTHLY") t = addMonthsUTC(ev.start, i * interval);
+    else if (freq === "YEARLY") t = addMonthsUTC(ev.start, i * interval * 12);
+    else return;
+    if (t == null) continue;
+    if (t > stop) return;
+    emitted++;
+    yield t;
+  }
+}
+function expandEvents(events, from, to) {
+  const overrides = /* @__PURE__ */ new Map();
+  for (const ev of events) {
+    if (ev.recurrenceId != null) overrides.set(`${ev.uid}@${ev.recurrenceId}`, ev);
+  }
+  const out = [];
+  for (const ev of events) {
+    if (ev.recurrenceId != null) {
+      if (ev.end > from && ev.start < to) out.push(ev);
+      continue;
+    }
+    const duration = ev.end - ev.start;
+    if (!ev.rrule) {
+      if (ev.end > from && ev.start < to) out.push(ev);
+      continue;
+    }
+    for (const start of occurrences(ev, to)) {
+      if (ev.exdates.has(start) || overrides.has(`${ev.uid}@${start}`)) continue;
+      const end = start + duration;
+      if (end > from && start < to) out.push({ ...ev, start, end, rrule: null });
+    }
+  }
+  return out.sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+}
+function normaliseEvents(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((e) => {
+    const start = new Date(e.start).getTime();
+    if (!Number.isFinite(start)) return null;
+    const end = e.end != null ? new Date(e.end).getTime() : start;
+    return {
+      uid: e.id ?? "",
+      title: String(e.title ?? e.summary ?? "Untitled"),
+      location: String(e.location ?? ""),
+      start,
+      end: Number.isFinite(end) ? end : start,
+      allDay: Boolean(e.allDay),
+      rrule: null,
+      exdates: /* @__PURE__ */ new Set(),
+      recurrenceId: null
+    };
+  }).filter(Boolean);
+}
+
+// src/tiles/glance.js
+var C2 = 50;
+function miniDial() {
+  const ticks = Array.from({ length: 60 }, (_, i) => {
+    const major = i % 5 === 0;
+    return `<line class="t${major ? " M" : ""}" x1="${C2}" y1="${major ? 7.5 : 8.6}" x2="${C2}" y2="${4.6}" transform="rotate(${i * 6} ${C2} ${C2})"/>`;
+  }).join("");
+  const nums = Array.from({ length: 12 }, (_, i) => {
+    const h = i + 1;
+    const a = h * Math.PI / 6;
+    return `<text x="${(C2 + Math.sin(a) * 33).toFixed(2)}" y="${(C2 - Math.cos(a) * 33).toFixed(2)}" text-anchor="middle" dominant-baseline="central">${h}</text>`;
+  }).join("");
+  return `<svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
+    <circle class="plate" cx="50" cy="50" r="48"/>
+    ${ticks}${nums}
+    <g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
+    <g class="h mn"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="13"/></g>
+    <g class="h sc"><line x1="50" y1="58" x2="50" y2="8"/></g>
+    <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>
+  </svg>`;
+}
+var BezelGlance = class extends BezelElement {
+  static attributes = [...WEATHER_ATTRIBUTES, "events", "ics", "max-events", "hide-weather"];
+  static defaultTheme = "mist";
+  static themes = {
+    mist: { surface: "#B9C6CE", ink: "#0F1316", accent: "#FFFFFF", soft: "#DCE3E8" },
+    orchid: { surface: "#D98CF2", ink: "#160F1A", accent: "#4A35D4", soft: "#EBC4F8" },
+    sand: { surface: "#E9DCC6", ink: "#1E1913", accent: "#C2410C", soft: "#F5EDE0" },
+    slate: { surface: "#1C2127", ink: "#EEF1F4", accent: "#7CC4FF", soft: "#2B323A" }
+  };
+  static styles = (
+    /* css */
+    `
+    .screen { background: radial-gradient(120% 100% at 20% 0%, color-mix(in srgb, var(--_surface), #fff 10%), var(--_surface) 60%); }
+    .g { position: absolute; inset: 0; display: grid; grid-template: 1fr auto / 1fr 1fr; gap: 3cqw 5cqw; padding: 8cqw; }
+    .date { display: grid; align-content: start; gap: 0; }
+    .date .md { font-size: 6.6cqw; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+    .date .md b { color: var(--_accent); font-weight: 700; }
+    .date .dd { font-size: 31cqw; font-weight: 600; letter-spacing: -0.06em; line-height: .86; margin-inline-start: -1.2cqw; margin-block-start: 1cqw; font-variant-numeric: lining-nums; }
+    .clock { display: grid; place-items: start end; }
+    .dial { inline-size: 40cqw; aspect-ratio: 1; }
+    .plate { fill: color-mix(in srgb, var(--_soft), transparent 55%); stroke: color-mix(in srgb, var(--_ink), transparent 88%); stroke-width: .6; }
+    .dial .t { stroke: var(--_ink); stroke-width: .5; opacity: .35; stroke-linecap: round; }
+    .dial .t.M { stroke-width: 1.2; opacity: .9; }
+    .dial text { font-size: 10px; font-weight: 600; fill: var(--_ink); font-family: var(--_font); }
+    .dial .h line { stroke: var(--_ink); stroke-linecap: round; stroke-width: 1.4; }
+    .dial .h line.w { stroke-width: 3.6; }
+    .dial .sc line { stroke: var(--_accent); stroke-width: .9; }
+    .dial .hub { fill: var(--_ink); } .dial .pin { fill: var(--_accent); }
+    .dial .h { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+
+    .agenda { display: grid; align-content: end; gap: 2.2cqw; min-inline-size: 0; }
+    .ev { display: grid; gap: .2cqw; padding-inline-start: 2.6cqw; border-inline-start: 0.9cqw solid var(--_accent); min-inline-size: 0; }
+    .ev .when { font-size: 3.6cqw; font-weight: 700; color: var(--_accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev .what { font-size: 4.3cqw; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev.now { border-inline-start-color: var(--_ink); }
+    .none { font-size: 4.3cqw; font-weight: 560; opacity: .7; }
+
+    .year { display: grid; align-content: end; gap: 1.6cqw; }
+    .year .wk { font-size: 4.4cqw; font-weight: 700; color: var(--_accent); letter-spacing: .02em; }
+    .year .big { font-size: 13cqw; font-weight: 600; letter-spacing: -0.04em; line-height: .9; }
+    .bar { block-size: 1.6cqw; border-radius: 1cqw; background: color-mix(in srgb, var(--_ink), transparent 85%); overflow: hidden; }
+    .bar i { display: block; block-size: 100%; background: var(--_ink); border-radius: inherit; }
+    .year .lbl { font-size: 3.5cqw; font-weight: 560; opacity: .75; font-variant-numeric: tabular-nums; }
+
+    .wx { display: grid; align-content: end; justify-items: start; gap: .4cqw; min-inline-size: 0; }
+    .wx .place { display: flex; align-items: center; gap: 1cqw; font-size: 4.3cqw; font-weight: 650; max-inline-size: 100%; }
+    .wx .place span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wx .place .icon { inline-size: 3.2cqw; flex: none; }
+    .wx .temp { font-size: 22cqw; font-weight: 560; letter-spacing: -0.06em; line-height: .92; margin-inline-start: -1cqw; font-variant-numeric: lining-nums; }
+    .wx .cond { display: flex; align-items: center; gap: 1.2cqw; font-size: 3.7cqw; font-weight: 600; }
+    .wx .cond .icon { inline-size: 4.6cqw; }
+    .wx .hl { font-size: 3.6cqw; font-weight: 560; opacity: .75; font-variant-numeric: tabular-nums; }
+    .sample { font-size: 2.8cqw; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
+  `
+  );
+  #weather = new WeatherSource(this);
+  #rawEvents = null;
+  #icsTimer = 0;
+  #icsRequest = 0;
+  connected() {
+    if (!this.flag("hide-weather")) this.#weather.start();
+    this.#loadEvents();
+  }
+  disconnected() {
+    this.#weather.stop();
+    clearTimeout(this.#icsTimer);
+  }
+  attributeChanged(name) {
+    if (WEATHER_ATTRIBUTES.includes(name) && name !== "refresh") this.#weather.start();
+    if (name === "hide-weather") this.flag("hide-weather") ? this.#weather.stop() : this.#weather.start();
+    if (name === "events" || name === "ics") this.#loadEvents();
+  }
+  get weather() {
+    return this.#weather.data;
+  }
+  set weather(data) {
+    this.#weather.set(data);
+  }
+  get events() {
+    return this.#rawEvents;
+  }
+  set events(list) {
+    this.#rawEvents = normaliseEvents(list);
+    this.invalidate();
+  }
+  set icsText(text) {
+    this.#rawEvents = parseICS(text, { timeZone: this.timeZone });
+    this.invalidate();
+  }
+  async #loadEvents() {
+    clearTimeout(this.#icsTimer);
+    const json = this.getAttribute("events");
+    if (json) {
+      try {
+        this.#rawEvents = normaliseEvents(JSON.parse(json));
+      } catch {
+        console.warn("[bezel] The events attribute is not valid JSON.");
+        this.#rawEvents = [];
+      }
+      this.invalidate();
+      return;
+    }
+    const url = this.getAttribute("ics");
+    if (!url) return;
+    const id = ++this.#icsRequest;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (id !== this.#icsRequest) return;
+      this.#rawEvents = parseICS(text, { timeZone: this.timeZone });
+      this.invalidate();
+    } catch (err) {
+      console.warn(`[bezel] Could not load the calendar feed (${err.message}). Many feeds block browsers; see the README for options.`);
+    }
+    this.#icsTimer = setTimeout(() => this.#loadEvents(), 15 * 6e4);
+  }
+  get tickRate() {
+    return this.reducedMotion ? "second" : "frame";
+  }
+  #todaysEvents(z) {
+    if (!this.#rawEvents) return null;
+    const dayStart = zonedToUtc(z.year, z.month, z.day, 0, 0, 0, this.timeZone);
+    const dayEnd = zonedToUtc(z.year, z.month, z.day + 1, 0, 0, 0, this.timeZone);
+    const max = Math.max(1, parseInt(this.getAttribute("max-events"), 10) || 3);
+    return expandEvents(this.#rawEvents, dayStart, dayEnd).filter((e) => e.end > z.ms || e.allDay && e.end > dayStart).slice(0, max);
+  }
+  #range(e) {
+    if (e.allDay) return "All day";
+    const opts = { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: this.timeZone };
+    try {
+      const f = new Intl.DateTimeFormat(this.locale, opts);
+      return e.end > e.start ? f.formatRange(e.start, e.end) : f.format(e.start);
+    } catch {
+      return new Date(e.start).toLocaleTimeString();
+    }
+  }
+  template(z) {
+    const n = names(this.locale);
+    const events = this.#todaysEvents(z);
+    let lower;
+    if (events) {
+      lower = events.length ? `<div class="agenda">${events.map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? " now" : ""}"><span class="when">${esc(this.#range(e))}</span><span class="what">${esc(e.title)}</span></div>`).join("")}</div>` : '<div class="agenda"><span class="none">Nothing else today</span></div>';
+    } else {
+      const doy = dayOfYear(z.year, z.month, z.day);
+      const total = daysInYear(z.year);
+      const pct = Math.round(doy / total * 100);
+      lower = `<div class="year">
+        <span class="wk">Week ${isoWeek(z.year, z.month, z.day)}</span>
+        <span class="big num">${pct}%</span>
+        <div class="bar"><i style="inline-size:${(doy / total * 100).toFixed(2)}%"></i></div>
+        <span class="lbl">Day ${doy} of ${total}</span>
+      </div>`;
+    }
+    let wx;
+    if (this.flag("hide-weather")) {
+      wx = `<div class="wx"><span class="place"><span>${esc(n.monthLong[z.month])}</span></span><span class="temp num">${isoWeek(z.year, z.month, z.day)}</span><span class="cond">Week of the year</span></div>`;
+    } else {
+      const w = this.#weather.data;
+      const deg = (v) => v == null ? "--" : `${Math.round(v)}\xB0`;
+      const place = w?.place || this.getAttribute("location") || "";
+      wx = `<div class="wx">
+        <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? '<span class="sample">Sample</span>' : ""}</span>
+        <span class="temp num">${deg(w?.temperature)}</span>
+        <span class="cond">${w ? skyIcon(w.sky, w.isDay) : ""}<span>${esc(w ? w.condition : "Loading")}</span></span>
+        <span class="hl">H:${deg(w?.high)} L:${deg(w?.low)}</span>
+      </div>`;
+    }
+    return `<div class="g" aria-hidden="true">
+      <div class="date"><span class="md"><b>${esc(n.weekdayShort[z.weekday].replace(".", ""))}</b> ${esc(n.monthShort[z.month].replace(".", ""))}</span><span class="dd">${z.day}</span></div>
+      <div class="clock">${miniDial()}</div>
+      ${lower}
+      ${wx}
+    </div>`;
+  }
+  #lastMinute = -1;
+  update(z, first) {
+    const a = handAngles(z, { smooth: this.tickRate === "frame" });
+    this.$(".hr")?.setAttribute("transform", `rotate(${a.hour.toFixed(3)} 50 50)`);
+    this.$(".mn")?.setAttribute("transform", `rotate(${a.minute.toFixed(3)} 50 50)`);
+    this.$(".sc")?.setAttribute("transform", `rotate(${a.second.toFixed(3)} 50 50)`);
+    if (!first && z.minutes !== this.#lastMinute && this.#rawEvents) this.invalidate();
+    this.#lastMinute = z.minutes;
+  }
+  describe(z) {
+    const date = new Intl.DateTimeFormat(this.locale, { dateStyle: "full", timeZone: "UTC" }).format(Date.UTC(z.year, z.month, z.day));
+    const w = this.#weather.data;
+    return `${date}${w ? `. ${Math.round(w.temperature)} degrees and ${w.condition.toLowerCase()}${w.place ? ` in ${w.place}` : ""}` : ""}`;
+  }
+};
+define("bezel-glance", BezelGlance);
+
+// src/tiles/poster.js
+var BezelPoster = class extends BezelElement {
+  static attributes = ["week-start", "month", "no-highlight"];
+  static defaultFrame = "none";
+  static defaultTheme = "noir";
+  static themes = {
+    noir: { surface: "#000000", ink: "#FFFFFF", accent: "#FF4D2E", rule: "rgba(255,255,255,.22)" },
+    paper: { surface: "#F7F7F5", ink: "#0B0B0B", accent: "#E5322D", rule: "rgba(0,0,0,.16)" },
+    signal: { surface: "#E5322D", ink: "#FFFFFF", accent: "#111111", rule: "rgba(255,255,255,.3)" },
+    bone: { surface: "#E8E4DA", ink: "#1C1B19", accent: "#2346D8", rule: "rgba(0,0,0,.16)" }
+  };
+  static styles = (
+    /* css */
+    `
+    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); }
+    .frame--none .screen { border-radius: var(--_rim-r); }
+    .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; padding: 4.2cqw 2.4cqw 2cqw; }
+    .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }
+    .cols { display: grid; grid-template-columns: repeat(7, 1fr); min-block-size: 0; }
+    .col { display: grid; grid-template-rows: repeat(var(--rows), 1fr); border-inline-start: max(1px, 0.14cqw) solid var(--_rule); padding-inline-start: 0.5cqw; min-inline-size: 0; }
+    .col:first-child { border-inline-start-color: transparent; }
+    .c { font-size: var(--fs); font-weight: 700; line-height: .84; letter-spacing: -0.05em; align-self: end; white-space: nowrap;
+         font-variant-numeric: lining-nums proportional-nums; font-feature-settings: "lnum" 1, "pnum" 1; }
+    .c.h { letter-spacing: -0.02em; }
+    .c.today { color: var(--_accent); }
+  `
+  );
+  get tickRate() {
+    return "minute";
+  }
+  template(z) {
+    const pinned = parseMonth(this.getAttribute("month"));
+    const year = pinned?.year ?? z.year;
+    const month = pinned?.month ?? z.month;
+    const weekStart = parseWeekStart(this.getAttribute("week-start"), this.locale);
+    const n = names(this.locale);
+    const weeks = monthGrid(year, month, { weekStart, fillAdjacent: false });
+    const rows = weeks.length + 1;
+    const highlight = !this.flag("no-highlight") && year === z.year && month === z.month;
+    const fs = `min(calc((100cqh - 15cqh) / ${rows} * 1.14), 11cqw)`;
+    const cols = weekdayOrder(weekStart).map((dow, ci) => {
+      const head = `<span class="c h">${esc(n.weekdayNarrow[dow])}</span>`;
+      const cells = weeks.map((w) => {
+        const c = w[ci];
+        if (!c) return '<span class="c"></span>';
+        return `<span class="c${highlight && c.day === z.day ? " today" : ""}">${c.day}</span>`;
+      }).join("");
+      return `<div class="col">${head}${cells}</div>`;
+    }).join("");
+    return `<div class="p" style="--rows:${rows};--fs:${fs}" aria-hidden="true">
+      <div class="title">${year} ${esc(n.monthLong[month])}</div>
+      <div class="cols">${cols}</div>
+    </div>`;
+  }
+  describe(z) {
+    const pinned = parseMonth(this.getAttribute("month"));
+    const label = new Intl.DateTimeFormat(this.locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      Date.UTC(pinned?.year ?? z.year, pinned?.month ?? z.month, 15)
+    );
+    return `Calendar for ${label}`;
+  }
+};
+define("bezel-poster", BezelPoster);
+
+// src/index.js
+var version = "1.0.0";
+export {
+  BezelCalendar,
+  BezelClock,
+  BezelElement,
+  BezelGlance,
+  BezelPoster,
+  BezelWeather,
+  calendar_exports as calendar,
+  define,
+  ics_exports as ics,
+  safeLocale,
+  time_exports as time,
+  version,
+  weather_exports as weather
+};

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bezel Tiles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="High-definition clock, calendar and weather tiles as zero-dependency web components. Customise one, copy the snippet, or turn any screen into a desk display.">
+<meta name="theme-color" content="#E7E9EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D0E10" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='9' fill='%23111'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5.5' fill='%23FF5A1F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap">
+<link rel="stylesheet" href="site.css">
+<script type="module" src="../src/index.js"></script>
+<script type="module" src="site.js"></script>
+</head>
+<body>
+<!--SITE-BODY-START-->
+<header class="bar">
+  <div class="bar__in">
+    <a class="mark" href="#top" aria-label="Bezel home"><span class="mark__glyph" aria-hidden="true"></span>Bezel</a>
+    <nav class="bar__nav" aria-label="Sections">
+      <a href="#presets">Presets</a>
+      <a href="#studio">Studio</a>
+      <a href="#install">Install</a>
+      <a class="bar__gh" href="https://github.com/ShazMoghaddam/bezel">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">Open-source web components · v1.0</p>
+      <h1>Clocks, calendars and weather, sharp on every screen.</h1>
+      <p class="lede">Seven tile faces drawn entirely in vectors, so they stay crisp from a 120&nbsp;px widget to a 4K desk display. Restyle every colour, frame and font, then drop one line of HTML into any site, an old iPad, or your Mac desktop.</p>
+      <div class="hero__cta">
+        <a class="btn btn--solid" href="#studio">Open the studio</a>
+        <a class="btn" href="https://github.com/ShazMoghaddam/bezel">View on GitHub</a>
+      </div>
+      <dl class="specs">
+        <div><dt>Dependencies</dt><dd>0</dd></div>
+        <div><dt>Gzipped</dt><dd data-size>19 kB</dd></div>
+        <div><dt>Weather API key</dt><dd>None needed</dd></div>
+      </dl>
+    </div>
+    <div class="hero__stage" aria-label="Live examples">
+      <bezel-clock class="hero__a" variant="numerals" theme="sage"></bezel-clock>
+      <bezel-weather class="hero__b" location="London"></bezel-weather>
+      <bezel-calendar class="hero__c"></bezel-calendar>
+    </div>
+  </section>
+
+  <section class="section" id="presets" aria-labelledby="presets-h">
+    <div class="section__head">
+      <h2 id="presets-h">Start from a preset</h2>
+      <p>Every tile here is live. Pick one to open it in the studio.</p>
+    </div>
+    <div class="presets" data-presets></div>
+  </section>
+
+  <section class="section studio" id="studio" aria-labelledby="studio-h">
+    <div class="section__head">
+      <h2 id="studio-h">Studio</h2>
+      <p>Adjust a tile, then copy the HTML or open it full screen as a desk display.</p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Tile type" data-tabs></div>
+
+    <div class="studio__body">
+      <div class="canvas" data-canvas>
+        <div class="canvas__stage" data-stage></div>
+        <div class="canvas__foot">
+          <div class="seg seg--small" role="group" aria-label="Backdrop" data-backdrops>
+            <button type="button" data-bg="desk" aria-pressed="true">Desk</button>
+            <button type="button" data-bg="dark" aria-pressed="false">Night</button>
+            <button type="button" data-bg="walnut" aria-pressed="false">Walnut</button>
+          </div>
+          <span class="canvas__size" data-size-label>320 px</span>
+        </div>
+      </div>
+
+      <form class="panel" data-panel autocomplete="off" aria-label="Tile settings"></form>
+    </div>
+
+    <div class="out">
+      <div class="out__head">
+        <h3>HTML</h3>
+        <div class="out__actions">
+          <button type="button" class="btn btn--quiet" data-copy-link>Copy display link</button>
+          <button type="button" class="btn btn--quiet" data-desk>Desk mode</button>
+          <button type="button" class="btn btn--solid" data-copy>Copy code</button>
+        </div>
+      </div>
+      <pre class="code" tabindex="0"><code data-snippet></code></pre>
+      <p class="out__note" data-note role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="section install" id="install" aria-labelledby="install-h">
+    <div class="section__head">
+      <h2 id="install-h">Three ways to use it</h2>
+      <p>The same tiles, wherever you want them to live.</p>
+    </div>
+    <div class="ways">
+      <article class="way">
+        <span class="way__k">Website or app</span>
+        <h3>One script tag</h3>
+        <p>Load the bundle, then write the element. Works with plain HTML, React, Vue, Svelte or anything that renders HTML.</p>
+        <pre class="code code--sm"><code>&lt;script type="module"
+  src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.0.0/dist/bezel.min.js"&gt;&lt;/script&gt;
+
+&lt;bezel-clock variant="relief"&gt;&lt;/bezel-clock&gt;</code></pre>
+      </article>
+      <article class="way">
+        <span class="way__k">Desk display</span>
+        <h3>Any spare screen</h3>
+        <p>Open a display link on an old iPad, phone or monitor. It fills the screen, keeps it awake, and nudges the tile a few pixels each minute to protect against burn-in.</p>
+        <pre class="code code--sm"><code>/bezel/site/display.html
+  ?tile=clock&amp;variant=numerals&amp;theme=cobalt</code></pre>
+      </article>
+      <article class="way">
+        <span class="way__k">macOS desktop</span>
+        <h3>Übersicht widget</h3>
+        <p>Copy the widget folder into Übersicht and edit one config block to place tiles on your desktop, with calendar feeds read straight from disk.</p>
+        <pre class="code code--sm"><code>cp -R ubersicht/bezel.widget \
+  ~/Library/Application\ Support/\
+Übersicht/widgets/</code></pre>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot__in">
+    <span>Bezel · MIT licence · Built by <a href="https://shazmoghaddam.github.io">Shaz Moghaddam</a></span>
+    <span>Weather by <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0)</span>
+  </div>
+</footer>
+
+<div class="desk" data-desk-overlay hidden>
+  <div class="desk__stage" data-desk-stage></div>
+  <button type="button" class="desk__exit" data-desk-exit>Exit desk mode</button>
+</div>
+<!--SITE-BODY-END-->
+</body>
+</html>

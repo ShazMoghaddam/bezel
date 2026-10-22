@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bezel showcase</title>
+<!-- Used to render docs/bezel-tiles.png: python3 scripts/shot.py http://localhost:4173/docs/showcase.html docs/bezel-tiles.png 1600 1000 -->
+<style>
+  body { margin: 0; padding: 64px; background: radial-gradient(120% 100% at 50% 0%, #F2F3F5, #DADDE2); display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; align-items: start; }
+  body > * { --bezel-size: 100%; width: 100%; }
+  .wide { grid-column: span 2; }
+</style>
+<script type="module" src="../src/index.js"></script>
+<bezel-clock variant="numerals" theme="sage" timezone="Europe/London"></bezel-clock>
+<bezel-clock variant="relief" theme="blush" timezone="Europe/London"></bezel-clock>
+<bezel-calendar timezone="Europe/London" locale="en-GB"></bezel-calendar>
+<bezel-weather id="w" locale="en-GB"></bezel-weather>
+<bezel-glance theme="orchid" location="New York" id="g" timezone="America/New_York" hour-cycle="12" locale="en-US"></bezel-glance>
+<bezel-clock variant="classic" theme="porcelain" frame="bezel" timezone="Europe/London"></bezel-clock>
+<bezel-poster class="wide" theme="noir" timezone="Europe/London" locale="en-GB"></bezel-poster>
+<script type="module">
+  await customElements.whenDefined('bezel-glance');
+  // Fixed data so the image doesn't depend on today's weather.
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('w').weather = {
+    sample: false, place: 'London', units: 'metric', time: `${today}T13:00`, temperature: 14, humidity: 76, wind: 11,
+    code: 2, condition: 'Partly Cloudy', sky: 'partly', isDay: true, high: 16, low: 9,
+    sunrise: [`${today}T07:31`], sunset: [`${today}T17:52`], aqi: 18, aqiScale: 'eu',
+  };
+  document.getElementById('g').weather = {
+    sample: false, place: 'New York', units: 'imperial', time: `${today}T09:00`, temperature: 61, humidity: 58, wind: 6,
+    code: 1, condition: 'Mostly Sunny', sky: 'clear', isDay: true, high: 66, low: 52,
+    sunrise: [`${today}T07:12`], sunset: [`${today}T18:05`], aqi: 21, aqiScale: 'us',
+  };
+  const d = new Date(), at = (h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+  document.getElementById('g').events = [
+    { title: 'Product review', start: at(23, 0), end: at(23, 20) },
+    { title: 'Design sync', start: at(23, 25), end: at(23, 40) },
+    { title: 'Lunch with Jennie', start: at(23, 45), end: at(23, 59) },
+  ];
+</script>
