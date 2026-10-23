@@ -173,7 +173,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     box-shadow: 0 10px 24px -14px rgba(0,0,0,.35);
   }
   .canvas__stage { padding: var(--s-4) !important; }
-  .canvas__foot { padding: 6px var(--s-3) !important; }
+  .canvas__foot { margin: 0 var(--s-2) var(--s-2) !important; min-height: 40px !important; padding: 4px !important; }
 }
 
 .canvas {
@@ -185,26 +185,36 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 .canvas[data-bg="dark"] { --canvas-bg: radial-gradient(120% 90% at 50% 0%, #22252A 0%, #08090A 100%); }
 /* Light and Dark are fixed backdrops for judging a tile, whatever the page's own theme. */
-.canvas .seg--small { background: rgba(255,255,255,.6); border-color: rgba(0,0,0,.08); }
+.canvas .seg--small { background: rgba(0,0,0,.05); border-color: transparent; }
 .canvas .seg--small button { color: #4A5059; }
 .canvas .seg--small button[aria-pressed="true"] { background: #fff; color: #111316; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.06); }
-.canvas__bg { display: flex; align-items: center; gap: 8px; }
-.canvas__bg-l { font: 500 12px/1 var(--f-mono); color: #7A818B; }
-.canvas[data-bg="dark"] .canvas__bg-l { color: rgba(255,255,255,.6); }
-.canvas[data-bg="desk"] .canvas__live, .canvas[data-bg="desk"] .canvas__size { color: #7A818B; }
-@media (max-width: 1100px) { .canvas__live { display: none; } }
-@media (max-width: 420px) { .canvas__bg-l { display: none; } }
 .canvas__stage { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-items: center; padding: var(--s-6) var(--s-5); min-width: 0; min-height: 0; overflow: hidden; container-type: size; }
 /* The preview always fits the stage, whatever size is set: the code keeps the real size. */
 .canvas__stage > * { max-width: min(100cqw, 100cqh); }
 .canvas__stage > bezel-poster { max-width: min(100cqw, calc(100cqh * 4 / 3)); }
-.canvas__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); }
-.canvas__live { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--f-mono); color: var(--ink-3); }
-.canvas__live i { width: 6px; height: 6px; border-radius: 50%; background: #2FB463; box-shadow: 0 0 0 3px color-mix(in srgb, #2FB463, transparent 80%); }
-.canvas[data-bg="dark"] .canvas__live { color: rgba(255,255,255,.6); }
-@media (max-width: 480px) { .canvas__live { display: none; } }
-.canvas__size { font: 500 12px/1 var(--f-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.canvas[data-bg="dark"] .canvas__size { color: rgba(255,255,255,.6); }
+/* Preview bar: a floating strip with three equal zones, so "Live preview" sits dead centre
+   whatever sits either side of it. */
+.canvas { container-type: inline-size; }
+.canvas__foot {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s-3);
+  margin: 0 var(--s-4) var(--s-4); padding: 6px; min-height: 46px; border-radius: 14px;
+  background: rgba(255,255,255,.62); border: 1px solid rgba(0,0,0,.06);
+  backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 20px -14px rgba(0,0,0,.25);
+}
+.canvas[data-bg="dark"] .canvas__foot { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.1); box-shadow: none; }
+.canvas__bg { display: flex; align-items: center; gap: 10px; justify-self: start; min-width: 0; }
+.canvas__bg-l, .canvas__live, .canvas__size { font: 500 12px/1 var(--f-mono); letter-spacing: .01em; color: #6B727C; white-space: nowrap; }
+.canvas[data-bg="dark"] :is(.canvas__bg-l, .canvas__live, .canvas__size) { color: rgba(255,255,255,.62); }
+.canvas__bg-l { padding-left: 10px; }
+.canvas__live { justify-self: center; display: inline-flex; align-items: center; gap: 8px; }
+.canvas__live i { width: 7px; height: 7px; border-radius: 50%; background: #2FB463; box-shadow: 0 0 0 0 rgba(47,180,99,.45); animation: live-pulse 2.4s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(47,180,99,.45); } 70%, 100% { box-shadow: 0 0 0 6px rgba(47,180,99,0); } }
+@media (prefers-reduced-motion: reduce) { .canvas__live i { animation: none; } }
+.canvas__size { justify-self: end; padding-right: 10px; font-variant-numeric: tabular-nums; }
+/* On narrower previews the label goes first, then the live tag, so the bar never wraps. */
+@container (max-width: 600px) { .canvas__bg-l { display: none; } }
+@container (max-width: 360px) { .canvas__live { display: none; } .canvas__foot { grid-template-columns: 1fr auto; } }
 .canvas[data-bg="dark"] .seg--small { background: rgba(0,0,0,.35); border-color: rgba(255,255,255,.12); }
 .canvas[data-bg="dark"] .seg--small button { color: rgba(255,255,255,.7); }
 .canvas[data-bg="dark"] .seg--small button[aria-pressed="true"] { background: rgba(255,255,255,.16); color: #fff; box-shadow: none; }
