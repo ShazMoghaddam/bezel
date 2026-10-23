@@ -5,6 +5,7 @@ import { icons, skyIcon } from '../core/icons.js';
 import { parseICS, expandEvents, normaliseEvents } from '../core/ics.js';
 import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
 import { handStyle, lollipopHands, HANDS_CSS } from '../core/hands.js';
+import { tr, condition, highLow } from '../core/i18n.js';
 
 /**
  * <bezel-glance>  A dashboard tile: date, analog clock, agenda and weather.
@@ -197,7 +198,7 @@ class BezelGlance extends BezelElement {
 
   /** Short, never-clipped label: the start time, or "Now · until 11:30" while it runs. */
   #when(e, z) {
-    if (e.allDay) return 'All day';
+    if (e.allDay) return tr(this.locale, 'allDay');
     const opts = { hour: 'numeric', minute: '2-digit', hour12: this.hour12, timeZone: this.timeZone };
     let f;
     try {
@@ -205,7 +206,7 @@ class BezelGlance extends BezelElement {
     } catch {
       f = new Intl.DateTimeFormat('en-GB', opts);
     }
-    if (e.start <= z.ms && e.end > z.ms) return `Now · until ${f.format(e.end)}`;
+    if (e.start <= z.ms && e.end > z.ms) return tr(this.locale, 'nowUntil', { t: f.format(e.end) });
     return f.format(e.start);
   }
 
@@ -219,32 +220,32 @@ class BezelGlance extends BezelElement {
         ? `<div class="agenda">${events
             .map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? ' now' : ''}"><span class="when">${esc(this.#when(e, z))}</span><span class="what">${esc(e.title)}</span></div>`)
             .join('')}</div>`
-        : '<div class="agenda"><span class="none">Nothing else today</span></div>';
+        : `<div class="agenda"><span class="none">${esc(tr(this.locale, 'nothingElse'))}</span></div>`;
     } else {
       const doy = dayOfYear(z.year, z.month, z.day);
       const total = daysInYear(z.year);
       const pct = Math.round((doy / total) * 100);
       lower = `<div class="year">
-        <span class="wk">Week ${isoWeek(z.year, z.month, z.day)}</span>
+        <span class="wk">${esc(tr(this.locale, 'week', { n: isoWeek(z.year, z.month, z.day) }))}</span>
         <span class="big num">${pct}%</span>
         <div class="bar"><i style="inline-size:${((doy / total) * 100).toFixed(2)}%"></i></div>
-        <span class="lbl">Day ${doy} of ${total}</span>
+        <span class="lbl">${esc(tr(this.locale, 'dayOf', { d: doy, n: total }))}</span>
       </div>`;
     }
 
     let wx;
     if (this.flag('hide-weather')) {
-      wx = `<div class="wx"><span class="place"><span>${esc(n.monthLong[z.month])}</span></span><span class="temp num">${isoWeek(z.year, z.month, z.day)}</span><span class="cond">Week of the year</span></div>`;
+      wx = `<div class="wx"><span class="place"><span>${esc(n.monthLong[z.month])}</span></span><span class="temp num">${isoWeek(z.year, z.month, z.day)}</span><span class="cond">${esc(tr(this.locale, 'weekOfYear'))}</span></div>`;
     } else {
       const w = this.#weather.data;
       const deg = (v) => (v == null ? '--' : `${Math.round(v)}°`);
       const place = w?.place || this.getAttribute('location') || '';
       wx = `<div class="wx">
-        <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? '<span class="sample">Sample</span>' : ''}</span>
+        <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? `<span class="sample">${esc(tr(this.locale, 'sample'))}</span>` : ''}</span>
         ${w
           ? `<span class="temp num">${deg(w.temperature)}</span>
-             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(w.condition)}</span></span>
-             <span class="hl">H:${deg(w.high)} L:${deg(w.low)}</span>`
+             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(condition(this.locale, w.condition))}</span></span>
+             <span class="hl">${esc(highLow(this.locale, deg(w.high), deg(w.low)))}</span>`
           : '<span class="shim big"></span><span class="shim"></span><span class="shim short"></span>'}
       </div>`;
     }

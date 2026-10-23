@@ -10,7 +10,7 @@ import { handStyle, lollipopHands, baton, HANDS_CSS } from '../core/hands.js';
  *   variant          numerals | relief | classic   (default numerals)
  *   numerals         western | roman | persian      (default western)
  *   theme            sage | cobalt | ember | graphite | blush | stone | midnight | porcelain
- *   night-theme      a theme to switch to at night (see README)
+ *   dark-theme       a theme for dark mode (see README)
  *   second-timezone  classic face only: a small second dial for another city, e.g. "America/New_York"
  *   second-label     name shown under that dial (default: the city from the time zone)
  *   hide-seconds     hide the seconds hand
@@ -35,7 +35,7 @@ export function numeral(h, script = 'western') {
 }
 
 /** Hours between two zones at a moment, as a short label: "+5h", "−4h", "+5:30", or "" when equal. */
-export function zoneOffset(ms, from, to) {
+function zoneOffset(ms, from, to) {
   const wall = (tz) => {
     const z = zoned(ms, tz);
     return Date.UTC(z.year, z.month, z.day, z.hours, z.minutes);
@@ -49,7 +49,7 @@ export function zoneOffset(ms, from, to) {
 }
 
 /** "America/New_York" becomes "New York". */
-export function cityName(timeZone) {
+function cityName(timeZone) {
   return String(timeZone ?? '').split('/').pop().replace(/_/g, ' ');
 }
 
@@ -172,7 +172,7 @@ class BezelClock extends BezelElement {
     return SCRIPTS.has(s) ? s : 'western';
   }
 
-  get dayTheme() {
+  get themeName() {
     const t = this.getAttribute('theme');
     return t && BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
   }

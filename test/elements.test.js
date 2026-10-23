@@ -157,13 +157,20 @@ test('classic clock shows a second time zone dial in place of the 6', async () =
   el.remove();
 });
 
-test('night-theme applies during night hours', async () => {
-  const el = mount('<bezel-clock theme="porcelain" night-theme="midnight" night-hours="0-24"></bezel-clock>');
+test('dark mode: dark-theme, --bezel-dark-* and appearance', async () => {
+  const el = mount('<bezel-clock theme="porcelain" dark-theme="midnight"></bezel-clock>');
   await flush();
-  assert.equal(el.themeName, 'midnight');
-  el.setAttribute('night-hours', '0-0');
+  const css = () => el.shadowRoot.querySelector('style').textContent;
+  // Light colours come from the theme; dark mode prefers --bezel-dark-*, then the dark theme.
+  assert.match(css(), /--_surface: var\(--bezel-surface, #F4F4F2\)/);
+  assert.match(css(), /prefers-color-scheme: dark\) \{ :host\(:not\(\[appearance="light"\]\)\) \{ --_surface: var\(--bezel-dark-surface, #1B1F27\)/);
+  assert.match(css(), /:host\(\[appearance="dark"\]\) \{ --_surface: var\(--bezel-dark-surface, #1B1F27\)/);
+  // Without a dark theme, dark mode falls back to the light colour, so nothing changes by default.
+  el.removeAttribute('dark-theme');
   await flush();
+  assert.match(css(), /--_surface: var\(--bezel-dark-surface, var\(--bezel-surface, #F4F4F2\)\)/);
   assert.equal(el.themeName, 'porcelain');
+  assert.ok(!('isNight' in el), 'night-theme is gone');
   el.remove();
 });
 
@@ -248,4 +255,27 @@ test('rounder corners add a safe inset, and the numerals date can follow it', as
   await flush();
   assert.equal(el.shadowRoot.querySelector('.corner-date'), null);
   el.remove();
+});
+
+test('weather and glance words follow the language', async () => {
+  const el = mount('<bezel-weather location="Nowhere" units="metric" locale="fr-FR" still></bezel-weather>');
+  await new Promise((r) => setTimeout(r, 20));
+  el.weather = { ...el.weather, sample: false, condition: 'Partly Cloudy', sky: 'partly', high: 16, low: 9 };
+  await flush();
+  const text = el.shadowRoot.querySelector('.content').textContent;
+  assert.match(text, /Partiellement nuageux/);
+  assert.match(text, /Vent/);
+  assert.match(text, /H:16° B:9°/);
+  el.setAttribute('locale', 'en-GB');
+  await flush();
+  assert.match(el.shadowRoot.querySelector('.content').textContent, /Partly Cloudy.*Wind|Wind/s);
+  el.setAttribute('locale', 'pt-BR'); // not translated: falls back to English
+  await flush();
+  assert.match(el.shadowRoot.querySelector('.content').textContent, /Humidity/);
+  el.remove();
+  const g = mount('<bezel-glance hide-weather locale="de-DE"></bezel-glance>');
+  await flush();
+  assert.match(g.shadowRoot.querySelector('.year').textContent, /Woche \d+/);
+  assert.match(g.shadowRoot.querySelector('.year').textContent, /Tag \d+ von 36[56]/);
+  g.remove();
 });

@@ -1,4 +1,4 @@
-/*! Bezel v1.2.0 | MIT | github.com/ShazMoghaddam/bezel */
+/*! Bezel v2.0.0 | MIT | github.com/ShazMoghaddam/bezel */
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -363,7 +363,7 @@ function safeLocale(tag) {
   localeCache.set(tag, ok);
   return ok;
 }
-var COMMON_ATTRIBUTES = ["frame", "theme", "night-theme", "night-hours", "timezone", "locale", "hour-cycle"];
+var COMMON_ATTRIBUTES = ["frame", "theme", "dark-theme", "appearance", "timezone", "locale", "hour-cycle"];
 var FRAMES = /* @__PURE__ */ new Set(["device", "bezel", "none"]);
 var BezelElement = class extends HTMLElement {
   static attributes = [];
@@ -437,23 +437,14 @@ var BezelElement = class extends HTMLElement {
     return prefers12h(this.locale);
   }
   /** The theme chosen with the `theme` attribute, or the tile's default. */
-  get dayTheme() {
+  get themeName() {
     const t = this.getAttribute("theme");
     return t && this.constructor.themes[t] ? t : this.constructor.defaultTheme;
   }
-  /** The theme in use right now: `night-theme` during night hours, otherwise the day theme. */
-  get themeName() {
-    const night = this.getAttribute("night-theme");
-    if (night && this.constructor.themes[night] && this.isNight(this.now())) return night;
-    return this.dayTheme;
-  }
-  /** Night runs from 19:00 to 07:00 unless `night-hours="21-6"` says otherwise. */
-  isNight(z) {
-    const m = /^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(this.getAttribute("night-hours") ?? "");
-    const start = m ? Math.min(Number(m[1]), 23) : 19;
-    const end = m ? Math.min(Number(m[2]), 24) : 7;
-    if (start === end) return false;
-    return start > end ? z.hours >= start || z.hours < end : z.hours >= start && z.hours < end;
+  /** The theme for dark mode, from the `dark-theme` attribute, if it names one. */
+  get darkThemeName() {
+    const t = this.getAttribute("dark-theme");
+    return t && this.constructor.themes[t] ? t : null;
   }
   /** Boolean attribute helper: present and not "false". */
   flag(name) {
@@ -470,11 +461,23 @@ var BezelElement = class extends HTMLElement {
     return prefersReducedMotion();
   }
   // ---- Rendering --------------------------------------------------------
-  /** CSS custom properties for the active theme. Inline styles and page CSS override them. */
+  /**
+   * CSS custom properties for the theme. Inline styles and page CSS override them.
+   *
+   * In dark mode (the device's setting, or `appearance="dark"`) each colour comes from
+   * `--bezel-dark-*` if set, then the `dark-theme`, then the light colour, so a tile with no
+   * dark settings looks the same in both. `appearance="light"` opts out of dark mode.
+   */
   themeCSS() {
-    const theme = this.constructor.themes[this.themeName] ?? {};
-    const decl = Object.entries(theme).map(([k, v]) => `--_${k}: var(--bezel-${k}, ${v});`).join("");
-    return `:host { ${decl} }`;
+    const themes = this.constructor.themes;
+    const light = themes[this.themeName] ?? {};
+    const dark = themes[this.darkThemeName] ?? null;
+    const keys = Object.keys({ ...light, ...dark });
+    const lightDecl = keys.map((k) => `--_${k}: var(--bezel-${k}, ${light[k] ?? dark[k]});`).join("");
+    const darkDecl = keys.map((k) => `--_${k}: var(--bezel-dark-${k}, ${dark ? dark[k] ?? light[k] : `var(--bezel-${k}, ${light[k]})`});`).join("");
+    return `:host { ${lightDecl} }
+      @media (prefers-color-scheme: dark) { :host(:not([appearance="light"])) { ${darkDecl} } }
+      :host([appearance="dark"]) { ${darkDecl} }`;
   }
   render() {
     const z = this.now();
@@ -517,8 +520,7 @@ var BezelElement = class extends HTMLElement {
     if (z.seconds === 0 && z.millis < 1e3) this.#label(z);
   };
   #key(z) {
-    const night = this.hasAttribute("night-theme") ? this.isNight(z) ? "n" : "d" : "";
-    return `${z.year}-${z.month}-${z.day}${night}`;
+    return `${z.year}-${z.month}-${z.day}`;
   }
   #resubscribe() {
     this.#unsubscribe?.();
@@ -729,7 +731,7 @@ var BezelClock = class _BezelClock extends BezelElement {
     const s = this.getAttribute("numerals");
     return SCRIPTS.has(s) ? s : "western";
   }
-  get dayTheme() {
+  get themeName() {
     const t = this.getAttribute("theme");
     return t && _BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
   }
@@ -1336,6 +1338,291 @@ var WeatherSource = class {
   }
 };
 
+// src/core/i18n.js
+var EN = {
+  sunrise: "Sunrise",
+  sunset: "Sunset",
+  wind: "Wind",
+  humidity: "Humidity",
+  aqi: "AQI",
+  sample: "Sample",
+  weather: "Weather",
+  high: "H",
+  low: "L",
+  week: "Week {n}",
+  dayOf: "Day {d} of {n}",
+  weekOfYear: "Week of the year",
+  nothingElse: "Nothing else today",
+  allDay: "All day",
+  nowUntil: "Now \xB7 until {t}"
+};
+var T = {
+  fr: {
+    sunrise: "Lever",
+    sunset: "Coucher",
+    wind: "Vent",
+    humidity: "Humidit\xE9",
+    aqi: "IQA",
+    sample: "Exemple",
+    weather: "M\xE9t\xE9o",
+    high: "H",
+    low: "B",
+    week: "Semaine {n}",
+    dayOf: "Jour {d} sur {n}",
+    weekOfYear: "Semaine de l\u2019ann\xE9e",
+    nothingElse: "Rien d\u2019autre aujourd\u2019hui",
+    allDay: "Toute la journ\xE9e",
+    nowUntil: "En cours \xB7 jusqu\u2019\xE0 {t}",
+    cond: {
+      "Clear": "D\xE9gag\xE9",
+      "Mostly Clear": "Plut\xF4t d\xE9gag\xE9",
+      "Partly Cloudy": "Partiellement nuageux",
+      "Overcast": "Couvert",
+      "Fog": "Brouillard",
+      "Freezing Fog": "Brouillard givrant",
+      "Light Drizzle": "Bruine l\xE9g\xE8re",
+      "Drizzle": "Bruine",
+      "Heavy Drizzle": "Forte bruine",
+      "Freezing Drizzle": "Bruine vergla\xE7ante",
+      "Light Rain": "Pluie faible",
+      "Rain": "Pluie",
+      "Heavy Rain": "Forte pluie",
+      "Freezing Rain": "Pluie vergla\xE7ante",
+      "Light Snow": "Neige faible",
+      "Snow": "Neige",
+      "Heavy Snow": "Forte neige",
+      "Snow Grains": "Neige en grains",
+      "Showers": "Averses",
+      "Heavy Showers": "Fortes averses",
+      "Snow Showers": "Averses de neige",
+      "Thunderstorm": "Orage",
+      "Unknown": "Inconnu"
+    }
+  },
+  de: {
+    sunrise: "Aufgang",
+    sunset: "Untergang",
+    wind: "Wind",
+    humidity: "Feuchte",
+    aqi: "LQI",
+    sample: "Beispiel",
+    weather: "Wetter",
+    high: "H",
+    low: "T",
+    week: "Woche {n}",
+    dayOf: "Tag {d} von {n}",
+    weekOfYear: "Kalenderwoche",
+    nothingElse: "Heute nichts mehr",
+    allDay: "Ganzt\xE4gig",
+    nowUntil: "Jetzt \xB7 bis {t}",
+    cond: {
+      "Clear": "Klar",
+      "Mostly Clear": "\xDCberwiegend klar",
+      "Partly Cloudy": "Teilweise bew\xF6lkt",
+      "Overcast": "Bedeckt",
+      "Fog": "Nebel",
+      "Freezing Fog": "Gefrierender Nebel",
+      "Light Drizzle": "Leichter Nieselregen",
+      "Drizzle": "Nieselregen",
+      "Heavy Drizzle": "Starker Nieselregen",
+      "Freezing Drizzle": "Gefrierender Nieselregen",
+      "Light Rain": "Leichter Regen",
+      "Rain": "Regen",
+      "Heavy Rain": "Starker Regen",
+      "Freezing Rain": "Gefrierender Regen",
+      "Light Snow": "Leichter Schneefall",
+      "Snow": "Schnee",
+      "Heavy Snow": "Starker Schneefall",
+      "Snow Grains": "Schneegriesel",
+      "Showers": "Schauer",
+      "Heavy Showers": "Starke Schauer",
+      "Snow Showers": "Schneeschauer",
+      "Thunderstorm": "Gewitter",
+      "Unknown": "Unbekannt"
+    }
+  },
+  es: {
+    sunrise: "Amanecer",
+    sunset: "Atardecer",
+    wind: "Viento",
+    humidity: "Humedad",
+    aqi: "ICA",
+    sample: "Ejemplo",
+    weather: "Tiempo",
+    high: "M\xE1x.",
+    low: "M\xEDn.",
+    week: "Semana {n}",
+    dayOf: "D\xEDa {d} de {n}",
+    weekOfYear: "Semana del a\xF1o",
+    nothingElse: "Nada m\xE1s hoy",
+    allDay: "Todo el d\xEDa",
+    nowUntil: "Ahora \xB7 hasta las {t}",
+    cond: {
+      "Clear": "Despejado",
+      "Mostly Clear": "Mayormente despejado",
+      "Partly Cloudy": "Parcialmente nublado",
+      "Overcast": "Cubierto",
+      "Fog": "Niebla",
+      "Freezing Fog": "Niebla helada",
+      "Light Drizzle": "Llovizna ligera",
+      "Drizzle": "Llovizna",
+      "Heavy Drizzle": "Llovizna intensa",
+      "Freezing Drizzle": "Llovizna helada",
+      "Light Rain": "Lluvia ligera",
+      "Rain": "Lluvia",
+      "Heavy Rain": "Lluvia intensa",
+      "Freezing Rain": "Lluvia helada",
+      "Light Snow": "Nieve ligera",
+      "Snow": "Nieve",
+      "Heavy Snow": "Nevada intensa",
+      "Snow Grains": "Granos de nieve",
+      "Showers": "Chubascos",
+      "Heavy Showers": "Chubascos fuertes",
+      "Snow Showers": "Chubascos de nieve",
+      "Thunderstorm": "Tormenta",
+      "Unknown": "Desconocido"
+    }
+  },
+  it: {
+    sunrise: "Alba",
+    sunset: "Tramonto",
+    wind: "Vento",
+    humidity: "Umidit\xE0",
+    aqi: "IQA",
+    sample: "Esempio",
+    weather: "Meteo",
+    high: "Max",
+    low: "Min",
+    week: "Settimana {n}",
+    dayOf: "Giorno {d} di {n}",
+    weekOfYear: "Settimana dell\u2019anno",
+    nothingElse: "Nient\u2019altro oggi",
+    allDay: "Tutto il giorno",
+    nowUntil: "Ora \xB7 fino alle {t}",
+    cond: {
+      "Clear": "Sereno",
+      "Mostly Clear": "Prevalentemente sereno",
+      "Partly Cloudy": "Parzialmente nuvoloso",
+      "Overcast": "Coperto",
+      "Fog": "Nebbia",
+      "Freezing Fog": "Nebbia gelata",
+      "Light Drizzle": "Pioviggine leggera",
+      "Drizzle": "Pioviggine",
+      "Heavy Drizzle": "Pioviggine intensa",
+      "Freezing Drizzle": "Pioviggine gelata",
+      "Light Rain": "Pioggia leggera",
+      "Rain": "Pioggia",
+      "Heavy Rain": "Pioggia forte",
+      "Freezing Rain": "Pioggia gelata",
+      "Light Snow": "Neve leggera",
+      "Snow": "Neve",
+      "Heavy Snow": "Neve forte",
+      "Snow Grains": "Neve granulosa",
+      "Showers": "Rovesci",
+      "Heavy Showers": "Forti rovesci",
+      "Snow Showers": "Rovesci di neve",
+      "Thunderstorm": "Temporale",
+      "Unknown": "Sconosciuto"
+    }
+  },
+  ja: {
+    sunrise: "\u65E5\u306E\u51FA",
+    sunset: "\u65E5\u306E\u5165\u308A",
+    wind: "\u98A8",
+    humidity: "\u6E7F\u5EA6",
+    aqi: "AQI",
+    sample: "\u30B5\u30F3\u30D7\u30EB",
+    weather: "\u5929\u6C17",
+    high: "\u6700\u9AD8",
+    low: "\u6700\u4F4E",
+    week: "\u7B2C{n}\u9031",
+    dayOf: "{n}\u65E5\u4E2D{d}\u65E5\u76EE",
+    weekOfYear: "\u9031\u756A\u53F7",
+    nothingElse: "\u4ECA\u65E5\u306E\u4E88\u5B9A\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093",
+    allDay: "\u7D42\u65E5",
+    nowUntil: "\u9032\u884C\u4E2D \xB7 {t}\u307E\u3067",
+    cond: {
+      "Clear": "\u5FEB\u6674",
+      "Mostly Clear": "\u6674\u308C",
+      "Partly Cloudy": "\u6674\u308C\u6642\u3005\u66C7\u308A",
+      "Overcast": "\u66C7\u308A",
+      "Fog": "\u9727",
+      "Freezing Fog": "\u7740\u6C37\u6027\u306E\u9727",
+      "Light Drizzle": "\u5F31\u3044\u9727\u96E8",
+      "Drizzle": "\u9727\u96E8",
+      "Heavy Drizzle": "\u5F37\u3044\u9727\u96E8",
+      "Freezing Drizzle": "\u7740\u6C37\u6027\u306E\u9727\u96E8",
+      "Light Rain": "\u5C0F\u96E8",
+      "Rain": "\u96E8",
+      "Heavy Rain": "\u5927\u96E8",
+      "Freezing Rain": "\u7740\u6C37\u6027\u306E\u96E8",
+      "Light Snow": "\u5C0F\u96EA",
+      "Snow": "\u96EA",
+      "Heavy Snow": "\u5927\u96EA",
+      "Snow Grains": "\u9727\u96EA",
+      "Showers": "\u306B\u308F\u304B\u96E8",
+      "Heavy Showers": "\u5F37\u3044\u306B\u308F\u304B\u96E8",
+      "Snow Showers": "\u306B\u308F\u304B\u96EA",
+      "Thunderstorm": "\u96F7\u96E8",
+      "Unknown": "\u4E0D\u660E"
+    }
+  },
+  fa: {
+    sunrise: "\u0637\u0644\u0648\u0639",
+    sunset: "\u063A\u0631\u0648\u0628",
+    wind: "\u0628\u0627\u062F",
+    humidity: "\u0631\u0637\u0648\u0628\u062A",
+    aqi: "AQI",
+    sample: "\u0646\u0645\u0648\u0646\u0647",
+    weather: "\u0647\u0648\u0627",
+    high: "\u0628\u06CC\u0634\u06CC\u0646\u0647",
+    low: "\u06A9\u0645\u06CC\u0646\u0647",
+    week: "\u0647\u0641\u062A\u0647 {n}",
+    dayOf: "\u0631\u0648\u0632 {d} \u0627\u0632 {n}",
+    weekOfYear: "\u0647\u0641\u062A\u0647\u200C\u06CC \u0633\u0627\u0644",
+    nothingElse: "\u0627\u0645\u0631\u0648\u0632 \u0628\u0631\u0646\u0627\u0645\u0647\u200C\u06CC \u062F\u06CC\u06AF\u0631\u06CC \u0646\u06CC\u0633\u062A",
+    allDay: "\u062A\u0645\u0627\u0645 \u0631\u0648\u0632",
+    nowUntil: "\u0627\u06A9\u0646\u0648\u0646 \xB7 \u062A\u0627 {t}",
+    cond: {
+      "Clear": "\u0635\u0627\u0641",
+      "Mostly Clear": "\u0639\u0645\u062F\u062A\u0627\u064B \u0635\u0627\u0641",
+      "Partly Cloudy": "\u0646\u06CC\u0645\u0647\u200C\u0627\u0628\u0631\u06CC",
+      "Overcast": "\u0627\u0628\u0631\u06CC",
+      "Fog": "\u0645\u0647",
+      "Freezing Fog": "\u0645\u0647 \u06CC\u062E\u200C\u0632\u062F\u0647",
+      "Light Drizzle": "\u0646\u0645\u200C\u0646\u0645 \u0628\u0627\u0631\u0627\u0646 \u0633\u0628\u06A9",
+      "Drizzle": "\u0646\u0645\u200C\u0646\u0645 \u0628\u0627\u0631\u0627\u0646",
+      "Heavy Drizzle": "\u0646\u0645\u200C\u0646\u0645 \u0628\u0627\u0631\u0627\u0646 \u0634\u062F\u06CC\u062F",
+      "Freezing Drizzle": "\u0646\u0645\u200C\u0646\u0645 \u0628\u0627\u0631\u0627\u0646 \u06CC\u062E\u200C\u0632\u062F\u0647",
+      "Light Rain": "\u0628\u0627\u0631\u0627\u0646 \u0633\u0628\u06A9",
+      "Rain": "\u0628\u0627\u0631\u0627\u0646",
+      "Heavy Rain": "\u0628\u0627\u0631\u0627\u0646 \u0634\u062F\u06CC\u062F",
+      "Freezing Rain": "\u0628\u0627\u0631\u0627\u0646 \u06CC\u062E\u200C\u0632\u062F\u0647",
+      "Light Snow": "\u0628\u0631\u0641 \u0633\u0628\u06A9",
+      "Snow": "\u0628\u0631\u0641",
+      "Heavy Snow": "\u0628\u0631\u0641 \u0633\u0646\u06AF\u06CC\u0646",
+      "Snow Grains": "\u062F\u0627\u0646\u0647\u200C\u0647\u0627\u06CC \u0628\u0631\u0641",
+      "Showers": "\u0631\u06AF\u0628\u0627\u0631",
+      "Heavy Showers": "\u0631\u06AF\u0628\u0627\u0631 \u0634\u062F\u06CC\u062F",
+      "Snow Showers": "\u0631\u06AF\u0628\u0627\u0631 \u0628\u0631\u0641",
+      "Thunderstorm": "\u062A\u0648\u0641\u0627\u0646 \u062A\u0646\u062F\u0631\u06CC",
+      "Unknown": "\u0646\u0627\u0645\u0634\u062E\u0635"
+    }
+  }
+};
+function tr(locale, key, vars = {}) {
+  const lang = String(locale ?? "").split("-")[0].toLowerCase();
+  const text = T[lang]?.[key] ?? EN[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
+}
+function condition(locale, label) {
+  const lang = String(locale ?? "").split("-")[0].toLowerCase();
+  return T[lang]?.cond?.[label] ?? label ?? "";
+}
+function highLow(locale, high, low) {
+  return `${tr(locale, "high")}:${high} ${tr(locale, "low")}:${low}`;
+}
+
 // src/tiles/weather.js
 var SKIES = {
   "clear-day": ["#1F6FCF", "#4F9BE6", "#A9D3F5"],
@@ -1493,6 +1780,7 @@ var BezelWeather = class extends BezelElement {
   }
   template() {
     const w = this.#source.data;
+    const lang = this.locale;
     const sky = w ? w.sky : "partly";
     const isDay = w ? w.isDay : true;
     const [s0, s1, s2] = SKIES[`${sky}-${isDay ? "day" : "night"}`] ?? SKIES["partly-day"];
@@ -1506,18 +1794,18 @@ var BezelWeather = class extends BezelElement {
       const sun = nextSunEvent(w);
       const windUnit = w.units === "imperial" ? "mph" : "km/h";
       stats = `
-        <div class="stat">${sun?.kind === "sunrise" ? icons.sunrise() : icons.sunset()}<b class="num">${isoClock(sun?.time, this.hour12)}</b><span>${sun?.kind === "sunrise" ? "Sunrise" : "Sunset"}</span></div>
-        <div class="stat">${icons.wind()}<b class="num">${Math.round(w.wind ?? 0)}<small>${windUnit}</small></b><span>Wind</span></div>
-        <div class="stat">${icons.humidity()}<b class="num">${Math.round(w.humidity ?? 0)}%</b><span>Humidity</span></div>
-        <div class="stat">${icons.air()}<b class="num">${w.aqi ?? "--"}</b><span>AQI</span></div>`;
+        <div class="stat">${sun?.kind === "sunrise" ? icons.sunrise() : icons.sunset()}<b class="num">${isoClock(sun?.time, this.hour12)}</b><span>${tr(lang, sun?.kind === "sunrise" ? "sunrise" : "sunset")}</span></div>
+        <div class="stat">${icons.wind()}<b class="num">${Math.round(w.wind ?? 0)}<small>${windUnit}</small></b><span>${tr(lang, "wind")}</span></div>
+        <div class="stat">${icons.humidity()}<b class="num">${Math.round(w.humidity ?? 0)}%</b><span>${tr(lang, "humidity")}</span></div>
+        <div class="stat">${icons.air()}<b class="num">${w.aqi ?? "--"}</b><span>${tr(lang, "aqi")}</span></div>`;
     }
     return `
       <div class="sky" aria-hidden="true" style="--s0:${s0};--s1:${s1};--s2:${s2}">${layers.join("")}</div>
       <div class="content${w ? "" : " loading"}" aria-hidden="true">
         <div class="top">
           <div class="meta">
-            <div class="place">${esc(place || (w ? "" : "Weather"))}${w?.sample ? '<span class="sample">Sample</span>' : ""}</div>
-            ${w ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(w.condition)}</span></div><div class="hl">H:${deg(w.high)} L:${deg(w.low)}</div>` : '<span class="shim l"></span><span class="shim s"></span>'}
+            <div class="place">${esc(place || (w ? "" : tr(lang, "weather")))}${w?.sample ? `<span class="sample">${esc(tr(lang, "sample"))}</span>` : ""}</div>
+            ${w ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(condition(lang, w.condition))}</span></div><div class="hl">${esc(highLow(lang, deg(w.high), deg(w.low)))}</div>` : '<span class="shim l"></span><span class="shim s"></span>'}
           </div>
           ${this.flag("hide-time") ? "" : '<div class="time"></div>'}
         </div>
@@ -1917,7 +2205,7 @@ var BezelGlance = class extends BezelElement {
   }
   /** Short, never-clipped label: the start time, or "Now · until 11:30" while it runs. */
   #when(e, z) {
-    if (e.allDay) return "All day";
+    if (e.allDay) return tr(this.locale, "allDay");
     const opts = { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: this.timeZone };
     let f2;
     try {
@@ -1925,7 +2213,7 @@ var BezelGlance = class extends BezelElement {
     } catch {
       f2 = new Intl.DateTimeFormat("en-GB", opts);
     }
-    if (e.start <= z.ms && e.end > z.ms) return `Now \xB7 until ${f2.format(e.end)}`;
+    if (e.start <= z.ms && e.end > z.ms) return tr(this.locale, "nowUntil", { t: f2.format(e.end) });
     return f2.format(e.start);
   }
   template(z) {
@@ -1933,30 +2221,30 @@ var BezelGlance = class extends BezelElement {
     const events = this.#todaysEvents(z);
     let lower;
     if (events) {
-      lower = events.length ? `<div class="agenda">${events.map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? " now" : ""}"><span class="when">${esc(this.#when(e, z))}</span><span class="what">${esc(e.title)}</span></div>`).join("")}</div>` : '<div class="agenda"><span class="none">Nothing else today</span></div>';
+      lower = events.length ? `<div class="agenda">${events.map((e) => `<div class="ev${e.start <= z.ms && e.end > z.ms && !e.allDay ? " now" : ""}"><span class="when">${esc(this.#when(e, z))}</span><span class="what">${esc(e.title)}</span></div>`).join("")}</div>` : `<div class="agenda"><span class="none">${esc(tr(this.locale, "nothingElse"))}</span></div>`;
     } else {
       const doy = dayOfYear(z.year, z.month, z.day);
       const total = daysInYear(z.year);
       const pct = Math.round(doy / total * 100);
       lower = `<div class="year">
-        <span class="wk">Week ${isoWeek(z.year, z.month, z.day)}</span>
+        <span class="wk">${esc(tr(this.locale, "week", { n: isoWeek(z.year, z.month, z.day) }))}</span>
         <span class="big num">${pct}%</span>
         <div class="bar"><i style="inline-size:${(doy / total * 100).toFixed(2)}%"></i></div>
-        <span class="lbl">Day ${doy} of ${total}</span>
+        <span class="lbl">${esc(tr(this.locale, "dayOf", { d: doy, n: total }))}</span>
       </div>`;
     }
     let wx;
     if (this.flag("hide-weather")) {
-      wx = `<div class="wx"><span class="place"><span>${esc(n.monthLong[z.month])}</span></span><span class="temp num">${isoWeek(z.year, z.month, z.day)}</span><span class="cond">Week of the year</span></div>`;
+      wx = `<div class="wx"><span class="place"><span>${esc(n.monthLong[z.month])}</span></span><span class="temp num">${isoWeek(z.year, z.month, z.day)}</span><span class="cond">${esc(tr(this.locale, "weekOfYear"))}</span></div>`;
     } else {
       const w = this.#weather.data;
       const deg = (v) => v == null ? "--" : `${Math.round(v)}\xB0`;
       const place = w?.place || this.getAttribute("location") || "";
       wx = `<div class="wx">
-        <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? '<span class="sample">Sample</span>' : ""}</span>
+        <span class="place">${icons.arrow()}<span>${esc(place)}</span>${w?.sample ? `<span class="sample">${esc(tr(this.locale, "sample"))}</span>` : ""}</span>
         ${w ? `<span class="temp num">${deg(w.temperature)}</span>
-             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(w.condition)}</span></span>
-             <span class="hl">H:${deg(w.high)} L:${deg(w.low)}</span>` : '<span class="shim big"></span><span class="shim"></span><span class="shim short"></span>'}
+             <span class="cond">${skyIcon(w.sky, w.isDay)}<span>${esc(condition(this.locale, w.condition))}</span></span>
+             <span class="hl">${esc(highLow(this.locale, deg(w.high), deg(w.low)))}</span>` : '<span class="shim big"></span><span class="shim"></span><span class="shim short"></span>'}
       </div>`;
     }
     return `<div class="g" aria-hidden="true">
@@ -2050,7 +2338,7 @@ var BezelPoster = class extends BezelElement {
 define("bezel-poster", BezelPoster);
 
 // src/index.js
-var version = "1.2.0";
+var version = "2.0.0";
 export {
   BezelCalendar,
   BezelClock,

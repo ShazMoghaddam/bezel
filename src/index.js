@@ -17,4 +17,4 @@ export * as calendar from './core/calendar.js';
 export * as weather from './core/weather.js';
 export * as ics from './core/ics.js';
 
-export const version = '1.2.0';
+export const version = '2.0.0';

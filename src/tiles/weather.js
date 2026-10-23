@@ -4,6 +4,7 @@ import { esc } from '../core/frame.js';
 import { icons, skyIcon } from '../core/icons.js';
 import { nextSunEvent, isoClock, aqiBand } from '../core/weather.js';
 import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
+import { tr, condition, highLow } from '../core/i18n.js';
 
 /**
  * <bezel-weather>
@@ -205,6 +206,7 @@ class BezelWeather extends BezelElement {
 
   template() {
     const w = this.#source.data;
+    const lang = this.locale;
     const sky = w ? w.sky : 'partly';
     const isDay = w ? w.isDay : true;
     const [s0, s1, s2] = SKIES[`${sky}-${isDay ? 'day' : 'night'}`] ?? SKIES['partly-day'];
@@ -220,10 +222,10 @@ class BezelWeather extends BezelElement {
       const sun = nextSunEvent(w);
       const windUnit = w.units === 'imperial' ? 'mph' : 'km/h';
       stats = `
-        <div class="stat">${sun?.kind === 'sunrise' ? icons.sunrise() : icons.sunset()}<b class="num">${isoClock(sun?.time, this.hour12)}</b><span>${sun?.kind === 'sunrise' ? 'Sunrise' : 'Sunset'}</span></div>
-        <div class="stat">${icons.wind()}<b class="num">${Math.round(w.wind ?? 0)}<small>${windUnit}</small></b><span>Wind</span></div>
-        <div class="stat">${icons.humidity()}<b class="num">${Math.round(w.humidity ?? 0)}%</b><span>Humidity</span></div>
-        <div class="stat">${icons.air()}<b class="num">${w.aqi ?? '--'}</b><span>AQI</span></div>`;
+        <div class="stat">${sun?.kind === 'sunrise' ? icons.sunrise() : icons.sunset()}<b class="num">${isoClock(sun?.time, this.hour12)}</b><span>${tr(lang, sun?.kind === 'sunrise' ? 'sunrise' : 'sunset')}</span></div>
+        <div class="stat">${icons.wind()}<b class="num">${Math.round(w.wind ?? 0)}<small>${windUnit}</small></b><span>${tr(lang, 'wind')}</span></div>
+        <div class="stat">${icons.humidity()}<b class="num">${Math.round(w.humidity ?? 0)}%</b><span>${tr(lang, 'humidity')}</span></div>
+        <div class="stat">${icons.air()}<b class="num">${w.aqi ?? '--'}</b><span>${tr(lang, 'aqi')}</span></div>`;
     }
 
     return `
@@ -231,9 +233,9 @@ class BezelWeather extends BezelElement {
       <div class="content${w ? '' : ' loading'}" aria-hidden="true">
         <div class="top">
           <div class="meta">
-            <div class="place">${esc(place || (w ? '' : 'Weather'))}${w?.sample ? '<span class="sample">Sample</span>' : ''}</div>
+            <div class="place">${esc(place || (w ? '' : tr(lang, 'weather')))}${w?.sample ? `<span class="sample">${esc(tr(lang, 'sample'))}</span>` : ''}</div>
             ${w
-              ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(w.condition)}</span></div><div class="hl">H:${deg(w.high)} L:${deg(w.low)}</div>`
+              ? `<div class="cond">${skyIcon(sky, isDay)}<span>${esc(condition(lang, w.condition))}</span></div><div class="hl">${esc(highLow(lang, deg(w.high), deg(w.low)))}</div>`
               : '<span class="shim l"></span><span class="shim s"></span>'}
           </div>
           ${this.flag('hide-time') ? '' : '<div class="time"></div>'}

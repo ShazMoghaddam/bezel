@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0 (2026-10-23)
+
+**Breaking:** `night-theme` and `night-hours` are removed. Tiles now follow the device's dark mode instead; use `dark-theme` in place of `night-theme`. Versions pinned to `@v1.x` are unaffected.
+
+- Dark mode: `dark-theme`, `--bezel-dark-*` colours and `appearance="light|dark"` on every tile. With no dark settings a tile looks the same in both modes.
+- Weather and glance words (conditions, Sunrise, Wind, "Week 43", "All day" and more) are translated into French, German, Spanish, Italian, Japanese and Persian, with English as the fallback.
+- Studio: a dark mode colour set with a Light and Dark preview, shareable design links (the address bar always holds the current design, and Share copies it), Language back on the weather tile, and Fraunces and Nunito typefaces with the loading line included in the code.
+- Site: a periwinkle and pink diagonal footer, social preview tags and image, zero axe accessibility violations, and the display page no longer accepts event-handler attributes from its link.
+- Housekeeping: unused code removed, a 27 kB gzip size budget checked in CI, and a new README with a fresh showcase image.
+
 ## 1.2.0 (2026-10-23)
 
 - Second time zone dial, refined: slim tapered hands with a short counterweight, hairline ticks, a recessed plate, and the time difference beside the city (for example "NEW YORK −5h").
