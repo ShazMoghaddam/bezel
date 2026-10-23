@@ -24,12 +24,17 @@
   }
   body.idle .hint { opacity: 0; }
   @media (prefers-reduced-motion: reduce) { #stage { transition: none; } }
+  main { display: contents; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>
 <script type="module" src="../src/index.js"></script>
 </head>
 <body>
+<main>
+<h1 class="sr-only">Bezel display</h1>
 <div id="stage"></div>
 <p class="hint">Tap for full screen</p>
+</main>
 <script type="module">
   // URL format: display.html?tile=clock&variant=relief&theme=blush&--accent=%23ff0066
   // Every plain parameter becomes an attribute; parameters starting with "--" become --bezel-* CSS variables.
@@ -39,23 +44,15 @@
   const tile = document.createElement(TAGS[type]);
 
   for (const [k, v] of params) {
-    if (k === 'tile' || k === 'sample') continue;
+    if (k === 'tile') continue;
     if (k.startsWith('--')) {
       const name = k.slice(2);
       if (!/^[a-z-]+$/.test(name)) continue;
       tile.style.setProperty(`--bezel-${name}`, name === 'radius' ? `${parseFloat(v)}cqw` : v);
-    } else if (/^[a-z-]+$/.test(k)) {
+    } else if (/^[a-z-]+$/.test(k) && !k.startsWith('on') && k !== 'style') {
+      // Never event handlers or inline styles: a shared link must not be able to run script.
       tile.setAttribute(k, v);
     }
-  }
-  if (type === 'glance' && params.get('sample') === '1') {
-    const d = new Date();
-    const at = (h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
-    const h = Math.min(21, d.getHours() + 1);
-    tile.setAttribute('events', JSON.stringify([
-      { title: 'Product review', start: at(h, 0), end: at(h + 1, 30) },
-      { title: 'Design sync', start: at(h + 2, 0), end: at(h + 2, 45) },
-    ]));
   }
   tile.style.setProperty('--bezel-size', type === 'poster' ? 'min(94vw, calc(94vh * 4 / 3))' : 'min(90vw, 90vh)');
   if (!params.has('frame') && type !== 'poster') tile.setAttribute('frame', 'none');

@@ -1,7 +1,7 @@
 // Bezel demo site: showcase, studio, code cards and desk mode.
 // The tiles themselves come from the library; this file only drives the page.
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.2.0/dist/bezel.min.js';
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.0.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 // [CSS value, label, Google Fonts family spec]. The copied code includes the line that loads the chosen face.
@@ -46,6 +46,8 @@ const LOCALES = [
 
 const COLOR_LABELS = { surface: 'Background', ink: 'Text', accent: 'Accent', hand: 'Hands', today: 'Today', muted: 'Other months', soft: 'Dial plate', rule: 'Rules', tint: 'Sky tint' };
 const COLOR_KEYS = Object.keys(COLOR_LABELS);
+// Every colour has a dark mode twin, set as --bezel-dark-<name> and stored as vars['dark-<name>'].
+const VAR_KEYS = [...COLOR_KEYS, ...COLOR_KEYS.map((k) => `dark-${k}`), 'radius', 'font'];
 
 const HAND_STYLES = [
   ['modern', 'Modern', 'The original slim hands'],
@@ -57,11 +59,10 @@ const language = { type: 'select', key: 'locale', label: 'Language', options: LO
 /** The 12 or 24 hour choice, for tiles that show a digital time. `when` says when that time is on screen. */
 const hours = (when, note = 'Auto follows the language setting.') => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when, note });
 // Analog clocks show no digits, so they skip Hours.
-const time = [timeZone, language];
 // On the clock, language only changes the date ("Fri 23" or "ven. 23"), so it shows only when there is one.
 const clockTime = [timeZone, { ...language, when: (a) => a.variant !== 'relief' && !a['hide-date'] }];
 const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
-const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']] };
+const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']], hint: 'Auto follows the language setting: °F in the US, °C elsewhere.' };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
 
 /*
@@ -78,6 +79,7 @@ const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', option
 const TYPES = {
   clock: {
     tag: 'bezel-clock',
+    darkTheme: 'midnight', // starting point for the dark mode colour set
     label: 'Clock',
     size: 380,
     attrs: { variant: 'numerals', theme: 'sage' },
@@ -102,6 +104,7 @@ const TYPES = {
   },
   calendar: {
     tag: 'bezel-calendar',
+    darkTheme: 'ink', // starting point for the dark mode colour set
     label: 'Calendar',
     size: 380,
     attrs: { theme: 'snow' },
@@ -127,12 +130,12 @@ const TYPES = {
       { type: 'toggle', key: 'still', label: 'Animated sky', invert: true },
       { type: 'toggle', key: 'hide-time', label: 'Clock in the corner', invert: true },
     ],
-    // Weather words are always English, so Language would change nothing here. The time zone
-    // and Hours only affect the corner clock.
-    time: [{ ...timeZone, when: (a) => !a['hide-time'] }, hours((a) => !a['hide-time'], "Auto follows the viewer's device.")],
+    // Language translates the conditions and labels; the time zone and Hours only affect the corner clock.
+    time: [{ ...timeZone, when: (a) => !a['hide-time'] }, hours((a) => !a['hide-time']), language],
   },
   glance: {
     tag: 'bezel-glance',
+    darkTheme: 'slate', // starting point for the dark mode colour set
     label: 'Glance',
     size: 400,
     attrs: { theme: 'mist', location: 'London' },
@@ -152,6 +155,7 @@ const TYPES = {
   },
   poster: {
     tag: 'bezel-poster',
+    darkTheme: 'noir', // starting point for the dark mode colour set
     label: 'Poster',
     size: 560,
     attrs: { theme: 'noir' },
@@ -207,14 +211,61 @@ function loadState() {
 }
 
 const state = loadState();
+let booted = false;
 const save = () => {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
   } catch {}
+  // Once the visitor starts designing, the address bar always holds a link to the current design.
+  if (booted) history.replaceState(null, '', shareURL());
 };
 
+// ---- Shareable links ---------------------------------------------------------
+// The current tile travels in ?design=, as base64url JSON: { t: type, a: attributes, v: CSS variables, s: size }.
+
+const b64url = {
+  encode: (text) => btoa(String.fromCharCode(...new TextEncoder().encode(text))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  decode: (code) => new TextDecoder().decode(Uint8Array.from(atob(code.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))),
+};
+
+function shareURL() {
+  const cfg = state.tiles[state.current];
+  const a = Object.fromEntries(Object.entries(cfg.attrs).filter(([, v]) => v !== '' && v != null && v !== false));
+  const v = Object.fromEntries(Object.entries(cfg.vars).filter(([, x]) => x !== '' && x != null));
+  const url = new URL(location.href);
+  url.searchParams.set('design', b64url.encode(JSON.stringify({ t: state.current, a, v, s: cfg.size })));
+  url.hash = 'studio';
+  return url.href;
+}
+
+/** Reads a shared design, keeping only settings the Studio knows, with safe values. */
+function readSharedDesign() {
+  const code = new URLSearchParams(location.search).get('design');
+  if (!code) return false;
+  try {
+    const d = JSON.parse(b64url.decode(code));
+    if (!TYPES[d.t]) return false;
+    const cfg = freshState().tiles[d.t];
+    for (const [k, v] of Object.entries(d.a ?? {})) {
+      if (/^[a-z][a-z-]*$/.test(k) && k !== 'style' && !k.startsWith('on') && (typeof v === 'string' || v === true)) cfg.attrs[k] = typeof v === 'string' ? v.slice(0, 300) : v;
+    }
+    for (const [k, v] of Object.entries(d.v ?? {})) {
+      if (!VAR_KEYS.includes(k)) continue;
+      if (k === 'radius' && Number.isFinite(+v)) cfg.vars.radius = Math.min(30, Math.max(1, +v));
+      else if (k === 'font' && FONTS.some(([f]) => f === v)) cfg.vars.font = v;
+      else if (/^#[0-9a-f]{3,8}$/i.test(v)) cfg.vars[k] = v;
+    }
+    if (Number.isFinite(+d.s)) cfg.size = Math.min(d.t === 'poster' ? 760 : 560, Math.max(180, Math.round(+d.s)));
+    state.current = d.t;
+    state.tiles[d.t] = cfg;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Applies a tile config to an element, adding and removing attributes as needed. */
-function applyTo(el, cfg, type) {
+function applyTo(el, cfg) {
   const attrs = { ...cfg.attrs };
   for (const a of [...el.attributes]) {
     if (['class', 'style', 'role', 'aria-label', 'aria-hidden', 'data-bezel-label'].includes(a.name)) continue;
@@ -224,7 +275,7 @@ function applyTo(el, cfg, type) {
     if (v === null || v === undefined || v === false || v === '') el.removeAttribute(k);
     else el.setAttribute(k, v === true ? '' : v);
   }
-  for (const k of [...COLOR_KEYS, 'radius', 'font']) {
+  for (const k of VAR_KEYS) {
     const v = cfg.vars[k];
     // Check for empty explicitly: a radius of 0 is a real value, not "unset".
     if (v !== undefined && v !== null && v !== '') el.style.setProperty(`--bezel-${k}`, k === 'radius' ? `${v}cqw` : v);
@@ -234,7 +285,7 @@ function applyTo(el, cfg, type) {
 
 function makeTile(type, cfg) {
   const el = document.createElement(TYPES[type].tag);
-  applyTo(el, cfg, type);
+  applyTo(el, cfg);
   return el;
 }
 
@@ -291,11 +342,15 @@ function effectiveTheme(type, cfg) {
 }
 
 /** The colour a picker should show: the custom value, else the tile's default. */
-function colorValue(type, cfg, key) {
-  const custom = cfg.vars[key];
-  const fallback = key === 'tint' ? '#4f9be6' : effectiveTheme(type, cfg)[key] || '#000000';
-  return toHex(custom || fallback);
+/** The colour a picker should show: the custom value, else the tile's default for that mode. */
+function colorValue(type, cfg, key, mode = 'light') {
+  const light = cfg.vars[key] || (key === 'tint' ? '#4f9be6' : effectiveTheme(type, cfg)[key] || '#000000');
+  if (mode !== 'dark') return toHex(light);
+  return toHex(cfg.vars[`dark-${key}`] || themesFor(type)[cfg.attrs['dark-theme']]?.[key] || light);
 }
+
+/** Which colour set the Colours tab edits and the preview shows. */
+const editingMode = (cfg) => (cfg.attrs['dark-theme'] && state.editing === 'dark' ? 'dark' : 'light');
 
 function colorKeys(type) {
   return TYPES[type].colors;
@@ -350,10 +405,11 @@ function control(c, cfg) {
 function colorRow(type, cfg, key, labelOverride) {
   const t = TYPES[type];
   const label = labelOverride ?? t.colorLabels?.[key] ?? COLOR_LABELS[key];
-  const v = colorValue(type, cfg, key);
-  const custom = Boolean(cfg.vars[key]);
+  const mode = editingMode(cfg);
+  const v = colorValue(type, cfg, key, mode);
+  const custom = Boolean(cfg.vars[mode === 'dark' ? `dark-${key}` : key]);
   return `<label class="crow" ${custom ? 'data-custom' : ''}>
-    <input type="color" value="${v}" data-color="${key}" aria-label="${esc(label)} colour">
+    <input type="color" value="${v}" data-color="${key}" aria-label="${esc(label)} colour${mode === 'dark' ? ' in dark mode' : ''}">
     <span class="crow__l">${esc(label)}</span>
     <span class="crow__v"><span data-hex="${key}">${v.toUpperCase()}</span><em>Custom</em></span>
   </label>`;
@@ -397,11 +453,20 @@ function groupBody(type, group) {
   }
 
   if (group === 'colours') {
-    const any = colorKeys(type).some((k) => cfg.vars[k]);
+    const any = colorKeys(type).some((k) => cfg.vars[k] || cfg.vars[`dark-${k}`]);
     const note = t.colorHint ?? (type === 'clock' && (cfg.attrs.variant || 'numerals') === 'relief'
       ? 'Relief numerals are pressed into the background, so they take their colour from it.'
       : 'Click a swatch to pick any colour. The preview updates as you choose.');
-    return `<div class="crows">${colorKeys(type).map((k) => colorRow(type, cfg, k)).join('')}</div>
+    const darkOn = Boolean(cfg.attrs['dark-theme']);
+    const mode = editingMode(cfg);
+    // Tiles with a dark preset can carry a second colour set that the device's dark mode switches to.
+    const dark = t.darkTheme
+      ? `<div class="field"><label class="toggle" for="c-dark">Dark mode colours<input type="checkbox" role="switch" id="c-dark" data-dark ${darkOn ? 'checked' : ''} aria-describedby="c-dark-h"></label>
+          <p class="hint" id="c-dark-h">The tile switches to these on its own when the device is in dark mode.</p></div>
+        ${darkOn ? `<div class="field"><span class="field__l" id="mode-l">Showing</span><div class="seg" role="group" aria-labelledby="mode-l">${[['light', 'Light mode'], ['dark', 'Dark mode']]
+          .map(([v, l]) => `<button type="button" data-editing="${v}" aria-pressed="${mode === v}">${l}</button>`).join('')}</div></div>` : ''}`
+      : '';
+    return `${dark}<div class="crows">${colorKeys(type).map((k) => colorRow(type, cfg, k)).join('')}</div>
       <p class="hint">${esc(note)}</p>
       <button type="button" class="btn btn--quiet btn--block" data-reset-colors ${any ? '' : 'disabled'}>Reset colours</button>`;
   }
@@ -425,7 +490,6 @@ function groupBody(type, group) {
 
 function renderPanel() {
   const type = state.current;
-  const t = TYPES[type];
   const group = currentGroup(type);
   const panel = $('[data-panel]');
   panel.id = 'studio-panel';
@@ -436,7 +500,7 @@ function renderPanel() {
       .map(([g, l]) => `<button type="button" role="tab" id="pt-${g}" data-group="${g}" aria-selected="${g === group}" tabindex="${g === group ? 0 : -1}" aria-controls="panel-body">${l}</button>`)
       .join('')}</div>
     <div class="panel__body" id="panel-body" role="tabpanel" aria-labelledby="pt-${group}">${groupBody(type, group)}</div>
-    <div class="panel__foot"><button type="button" class="btn btn--quiet" data-reset-tile>Reset ${esc(t.label.toLowerCase())}</button><a class="btn btn--solid" href="#install" data-get-code>Get the code</a></div>`;
+    <div class="panel__foot"><button type="button" class="btn btn--quiet" data-reset-tile>Reset</button><button type="button" class="btn btn--quiet" data-share>Share</button><a class="btn btn--solid" href="#install" data-get-code>Get the code</a></div>`;
   renderHandPreviews();
 }
 
@@ -478,9 +542,12 @@ function updatePreview(rebuild) {
     preview = makeTile(type, cfg);
     stage.append(preview);
   } else {
-    applyTo(preview, cfg, type);
+    applyTo(preview, cfg);
   }
   preview.style.setProperty('--bezel-size', `${cfg.size}px`);
+  // The preview shows whichever colour set is being edited; the real tile follows the device.
+  if (cfg.attrs['dark-theme']) preview.setAttribute('appearance', editingMode(cfg));
+  else preview.removeAttribute('appearance');
   $('[data-size-label]').textContent = `${cfg.size} px${type === 'poster' ? ` × ${Math.round((cfg.size * 3) / 4)} px` : ''}`;
   renderSnippet();
   save();
@@ -494,7 +561,7 @@ function snippetParts() {
   if (attrs.frame === (type === 'poster' ? 'none' : 'device')) delete attrs.frame;
   if (attrs.hands === 'modern') delete attrs.hands;
   const vars = {};
-  for (const k of COLOR_KEYS) if (cfg.vars[k]) vars[k] = cfg.vars[k];
+  for (const k of VAR_KEYS) if (k !== 'radius' && k !== 'font' && cfg.vars[k]) vars[k] = cfg.vars[k];
   if (cfg.vars.radius != null) vars.radius = cfg.vars.radius;
   if (cfg.vars.font) vars.font = cfg.vars.font;
   const style = [`--bezel-size: ${cfg.size}px`, ...Object.entries(vars).map(([k, v]) => `--bezel-${k}: ${k === 'radius' ? `${v}cqw` : v}`)];
@@ -554,6 +621,18 @@ function displayURL() {
   return new URL(`display.html?${params}`, location.href).href;
 }
 
+async function shareDesign(button) {
+  const url = shareURL();
+  try {
+    await navigator.clipboard.writeText(url);
+    button.textContent = 'Copied';
+    setTimeout(() => (button.textContent = 'Share'), 1800);
+    note('Link copied. Anyone who opens it sees this design in the Studio.');
+  } catch {
+    note(`Copy this link to share the design: ${url}`);
+  }
+}
+
 function note(text, el = $('[data-note]')) {
   el.textContent = text;
   clearTimeout(el._t);
@@ -573,7 +652,7 @@ function renderStudio(rebuild = false) {
 function refreshPanelMeta() {
   const cfg = state.tiles[state.current];
   const reset = $('[data-reset-colors]');
-  if (reset) reset.disabled = !colorKeys(state.current).some((k) => cfg.vars[k]);
+  if (reset) reset.disabled = !colorKeys(state.current).some((k) => cfg.vars[k] || cfg.vars[`dark-${k}`]);
 }
 
 function bindStudio() {
@@ -596,7 +675,6 @@ function bindStudio() {
   });
 
   const panel = $('[data-panel]');
-  panel.addEventListener('submit', (e) => e.preventDefault());
 
   const setHands = (value) => {
     const cfg = state.tiles[state.current];
@@ -636,13 +714,28 @@ function bindStudio() {
       setGroup(tab.dataset.group);
       return;
     }
+    const ed = e.target.closest('[data-editing]');
+    if (ed) {
+      state.editing = ed.dataset.editing;
+      renderPanel();
+      updatePreview();
+      panel.querySelector(`[data-editing="${ed.dataset.editing}"]`)?.focus();
+      return;
+    }
+    if (e.target.closest('[data-share]')) {
+      shareDesign(e.target.closest('[data-share]'));
+      return;
+    }
     const go = e.target.closest('[data-goto]');
     if (go) {
       setGroup(go.dataset.goto);
       return;
     }
     if (e.target.closest('[data-reset-colors]')) {
-      for (const k of colorKeys(state.current)) delete cfg.vars[k];
+      for (const k of colorKeys(state.current)) {
+        delete cfg.vars[k];
+        delete cfg.vars[`dark-${k}`];
+      }
       renderPanel();
       updatePreview();
       panel.querySelector('[data-group="colours"]')?.focus();
@@ -699,13 +792,10 @@ function bindStudio() {
     const t = e.target;
     if (t.matches('[data-color]')) {
       const key = t.dataset.color;
-      cfg.vars[key] = t.value;
-      // The accent picker appears twice for clocks (Colours and Clock hands); keep both in step.
-      for (const input of panel.querySelectorAll(`[data-color="${key}"]`)) {
-        if (input !== t) input.value = t.value;
-        input.closest('.crow').setAttribute('data-custom', '');
-      }
-      for (const hex of panel.querySelectorAll(`[data-hex="${key}"]`)) hex.textContent = t.value.toUpperCase();
+      cfg.vars[editingMode(cfg) === 'dark' ? `dark-${key}` : key] = t.value;
+      const row = t.closest('.crow');
+      row.setAttribute('data-custom', '');
+      row.querySelector('[data-hex]').textContent = t.value.toUpperCase();
       refreshPanelMeta();
       updatePreview();
       if ($('[data-hand-preview]')) renderHandPreviews();
@@ -723,6 +813,21 @@ function bindStudio() {
   panel.addEventListener('change', (e) => {
     const cfg = state.tiles[state.current];
     const t = e.target;
+    if (t.matches('[data-dark]')) {
+      // Turning dark mode on starts from the tile's dark preset; turning it off drops the dark set.
+      if (t.checked) {
+        cfg.attrs['dark-theme'] = TYPES[state.current].darkTheme;
+        state.editing = 'dark';
+      } else {
+        delete cfg.attrs['dark-theme'];
+        for (const k of COLOR_KEYS) delete cfg.vars[`dark-${k}`];
+        state.editing = 'light';
+      }
+      renderPanel();
+      updatePreview();
+      panel.querySelector('[data-dark]')?.focus();
+      return;
+    }
     if (t.matches('[data-toggle]')) {
       const on = t.checked;
       const present = t.dataset.invert === '1' ? !on : on;
@@ -914,7 +1019,14 @@ function buildFooterCopy() {
 buildFooterCopy();
 
 await Promise.all(Object.values(TYPES).map((t) => customElements.whenDefined(t.tag)));
+const shared = readSharedDesign();
 bindShowcase();
 bindStudio();
 bindWays();
 renderStudio(true);
+booted = true;
+if (shared) {
+  save();
+  $('#studio').scrollIntoView();
+  note('Shared design loaded. Change anything you like, then copy the code.');
+}

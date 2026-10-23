@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bezel social preview</title>
+<!-- Renders docs/social-preview.png (1280 x 640), the image shown when the site or repository is shared:
+     python3 scripts/shot.py http://localhost:4173/docs/social.html docs/social-preview.png 1280 640 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap">
+<style>
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    position: relative; font-family: "Geist", sans-serif; color: #111316;
+    background: radial-gradient(120% 120% at 20% 0%, #F4F5F7 0%, #E2E5E9 100%);
+  }
+  /* The footer's periwinkle and pink, as a diagonal panel behind the tiles. */
+  .split { position: absolute; inset: 0 0 0 auto; width: 620px; background: linear-gradient(to bottom right, #9FA1FF 50%, #F675A8 50%); clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%); }
+  .copy { position: absolute; left: 72px; top: 0; bottom: 0; width: 560px; display: grid; align-content: center; gap: 26px; }
+  .mark { display: flex; align-items: center; gap: 14px; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; }
+  .mark svg { width: 46px; height: 46px; }
+  h1 { margin: 0; font-size: 62px; line-height: 1; font-weight: 600; letter-spacing: -0.045em; }
+  .sub { font: 500 20px/1.4 "Geist Mono", monospace; color: #4A5059; letter-spacing: .01em; }
+  .tiles { position: absolute; right: 64px; top: 50%; translate: 0 -50%; display: grid; grid-template-columns: 220px 220px; gap: 24px; }
+  .tiles > * { --bezel-size: 220px; --bezel-font: "Geist", sans-serif; }
+</style>
+<script type="module" src="../src/index.js"></script>
+
+<div class="split"></div>
+<div class="copy">
+  <div class="mark"><svg viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="29" height="29" rx="9" stroke="#111316" stroke-width="2.4"/><rect x="6.5" y="6.5" width="19" height="19" rx="4.4" stroke="#F2541B" stroke-width="2.4"/><path d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3" stroke="#111316" stroke-width="2.2"/></svg>Bezel</div>
+  <h1>Clocks, calendars and weather, sharp on every screen.</h1>
+  <div class="sub">Free, open-source web components</div>
+</div>
+<div class="tiles">
+  <bezel-clock variant="relief" theme="ember" timezone="Europe/London"></bezel-clock>
+  <bezel-weather id="w" locale="en-GB" still></bezel-weather>
+  <bezel-calendar timezone="Europe/London" locale="en-GB" hide-time></bezel-calendar>
+  <bezel-clock variant="classic" theme="midnight" hands="lollipop" timezone="Europe/London" second-timezone="America/New_York"></bezel-clock>
+</div>
+<script type="module">
+  await customElements.whenDefined('bezel-weather');
+  // Fixed data so the image doesn't depend on today's weather.
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('w').weather = {
+    sample: false, place: 'London', units: 'metric', time: `${today}T13:00`, temperature: 14, humidity: 76, wind: 11,
+    code: 2, condition: 'Partly Cloudy', sky: 'partly', isDay: true, high: 16, low: 9,
+    sunrise: [`${today}T07:31`], sunset: [`${today}T17:52`], aqi: 18, aqiScale: 'eu',
+  };
+</script>

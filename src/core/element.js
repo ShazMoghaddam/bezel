@@ -19,14 +19,13 @@ export function safeLocale(tag) {
   return ok;
 }
 
-const COMMON_ATTRIBUTES = ['frame', 'theme', 'night-theme', 'night-hours', 'timezone', 'locale', 'hour-cycle'];
+const COMMON_ATTRIBUTES = ['frame', 'theme', 'dark-theme', 'appearance', 'timezone', 'locale', 'hour-cycle'];
 const FRAMES = new Set(['device', 'bezel', 'none']);
 
 /**
  * Base class for every Bezel tile.
  *
  * Subclasses provide:
- *   static tileName        the tag name, used for the accessible label
  *   static attributes      extra observed attributes
  *   static styles          CSS for the tile's content
  *   static themes          { name: { surface, ink, accent, ... } } presets
@@ -119,25 +118,15 @@ export class BezelElement extends HTMLElement {
   }
 
   /** The theme chosen with the `theme` attribute, or the tile's default. */
-  get dayTheme() {
+  get themeName() {
     const t = this.getAttribute('theme');
     return t && this.constructor.themes[t] ? t : this.constructor.defaultTheme;
   }
 
-  /** The theme in use right now: `night-theme` during night hours, otherwise the day theme. */
-  get themeName() {
-    const night = this.getAttribute('night-theme');
-    if (night && this.constructor.themes[night] && this.isNight(this.now())) return night;
-    return this.dayTheme;
-  }
-
-  /** Night runs from 19:00 to 07:00 unless `night-hours="21-6"` says otherwise. */
-  isNight(z) {
-    const m = /^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(this.getAttribute('night-hours') ?? '');
-    const start = m ? Math.min(Number(m[1]), 23) : 19;
-    const end = m ? Math.min(Number(m[2]), 24) : 7; // 24 means midnight at the end of the day
-    if (start === end) return false;
-    return start > end ? z.hours >= start || z.hours < end : z.hours >= start && z.hours < end;
+  /** The theme for dark mode, from the `dark-theme` attribute, if it names one. */
+  get darkThemeName() {
+    const t = this.getAttribute('dark-theme');
+    return t && this.constructor.themes[t] ? t : null;
   }
 
   /** Boolean attribute helper: present and not "false". */
@@ -160,13 +149,25 @@ export class BezelElement extends HTMLElement {
 
   // ---- Rendering --------------------------------------------------------
 
-  /** CSS custom properties for the active theme. Inline styles and page CSS override them. */
+  /**
+   * CSS custom properties for the theme. Inline styles and page CSS override them.
+   *
+   * In dark mode (the device's setting, or `appearance="dark"`) each colour comes from
+   * `--bezel-dark-*` if set, then the `dark-theme`, then the light colour, so a tile with no
+   * dark settings looks the same in both. `appearance="light"` opts out of dark mode.
+   */
   themeCSS() {
-    const theme = this.constructor.themes[this.themeName] ?? {};
-    const decl = Object.entries(theme)
-      .map(([k, v]) => `--_${k}: var(--bezel-${k}, ${v});`)
+    const themes = this.constructor.themes;
+    const light = themes[this.themeName] ?? {};
+    const dark = themes[this.darkThemeName] ?? null;
+    const keys = Object.keys({ ...light, ...dark });
+    const lightDecl = keys.map((k) => `--_${k}: var(--bezel-${k}, ${light[k] ?? dark[k]});`).join('');
+    const darkDecl = keys
+      .map((k) => `--_${k}: var(--bezel-dark-${k}, ${dark ? dark[k] ?? light[k] : `var(--bezel-${k}, ${light[k]})`});`)
       .join('');
-    return `:host { ${decl} }`;
+    return `:host { ${lightDecl} }
+      @media (prefers-color-scheme: dark) { :host(:not([appearance="light"])) { ${darkDecl} } }
+      :host([appearance="dark"]) { ${darkDecl} }`;
   }
 
   render() {
@@ -207,7 +208,7 @@ export class BezelElement extends HTMLElement {
   #tick = (ms) => {
     const z = zoned(ms, this.timeZone);
     if (this.#key(z) !== this.#lastDayKey) {
-      // Midnight, or the switch to or from the night theme: rebuild.
+      // Midnight: rebuild for the new day.
       this.render();
       return;
     }
@@ -216,8 +217,7 @@ export class BezelElement extends HTMLElement {
   };
 
   #key(z) {
-    const night = this.hasAttribute('night-theme') ? (this.isNight(z) ? 'n' : 'd') : '';
-    return `${z.year}-${z.month}-${z.day}${night}`;
+    return `${z.year}-${z.month}-${z.day}`;
   }
 
   #resubscribe() {

@@ -1,20 +1,28 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Bezel showcase</title>
-<!-- Used to render docs/bezel-tiles.png: python3 scripts/shot.py http://localhost:4173/docs/showcase.html docs/bezel-tiles.png 1600 1000 -->
+<!-- Used to render docs/bezel-tiles.png: python3 scripts/shot.py http://localhost:4173/docs/showcase.html docs/bezel-tiles.png 1600 1050 -->
 <style>
-  body { margin: 0; padding: 64px; background: radial-gradient(120% 100% at 50% 0%, #F2F3F5, #DADDE2); display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; align-items: start; }
-  body > * { --bezel-size: 100%; width: 100%; }
-  .wide { grid-column: span 2; }
+  /* Top row: calendar and poster at the same height (3fr : 4fr). Bottom row: five square tiles. */
+  body { margin: 0; padding: 64px; background: radial-gradient(120% 100% at 50% 0%, #F2F3F5, #DADDE2); display: grid; gap: 40px; }
+  .row { display: grid; gap: 40px; align-items: start; }
+  .row--top { grid-template-columns: 3fr 4fr; }
+  .row--tiles { grid-template-columns: repeat(5, 1fr); }
+  .row > * { --bezel-size: 100%; width: 100%; --bezel-font: "Geist", sans-serif; }
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&display=swap">
 <script type="module" src="../src/index.js"></script>
-<bezel-clock variant="numerals" theme="sage" timezone="Europe/London"></bezel-clock>
-<bezel-clock variant="relief" theme="blush" timezone="Europe/London"></bezel-clock>
-<bezel-calendar timezone="Europe/London" locale="en-GB"></bezel-calendar>
-<bezel-weather id="w" locale="en-GB"></bezel-weather>
-<bezel-glance theme="orchid" location="New York" id="g" timezone="America/New_York" hour-cycle="12" locale="en-US"></bezel-glance>
-<bezel-clock variant="classic" theme="porcelain" timezone="Europe/London" second-timezone="America/New_York"></bezel-clock>
-<bezel-poster class="wide" theme="noir" timezone="Europe/London" locale="en-GB"></bezel-poster>
+<div class="row row--top">
+  <bezel-calendar timezone="Europe/London" locale="en-GB"></bezel-calendar>
+  <bezel-poster theme="noir" frame="device" timezone="Europe/London" locale="en-GB"></bezel-poster>
+</div>
+<div class="row row--tiles">
+  <bezel-clock variant="numerals" theme="sage" timezone="Europe/London"></bezel-clock>
+  <bezel-clock variant="relief" theme="ember" timezone="Europe/London"></bezel-clock>
+  <bezel-weather id="w" locale="en-GB"></bezel-weather>
+  <bezel-glance theme="orchid" location="New York" id="g" timezone="America/New_York" hour-cycle="12" locale="en-US"></bezel-glance>
+  <bezel-clock variant="classic" theme="midnight" hands="lollipop" timezone="Europe/London" second-timezone="America/New_York"></bezel-clock>
+</div>
 <script type="module">
   await customElements.whenDefined('bezel-glance');
   // Fixed data so the image doesn't depend on today's weather.

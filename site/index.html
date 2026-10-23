@@ -6,6 +6,18 @@
 <title>Bezel Tiles</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="High-definition clock, calendar and weather tiles as zero-dependency web components. Customise one, copy the snippet, or turn any screen into a desk display.">
+<link rel="canonical" href="https://shazmoghaddam.github.io/bezel/site/">
+<!-- Shown when the link is shared on LinkedIn, Slack, WhatsApp, X and the like -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bezel">
+<meta property="og:title" content="Bezel: clocks, calendars and weather, sharp on every screen">
+<meta property="og:description" content="Free, open-source web components. Design a tile in the Studio, copy one line of HTML, or turn any spare screen into a desk display.">
+<meta property="og:url" content="https://shazmoghaddam.github.io/bezel/site/">
+<meta property="og:image" content="https://shazmoghaddam.github.io/bezel/docs/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Bezel tiles: an orange clock, a weather tile, a month calendar and a dark classic clock">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#E7E9EC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D0E10" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='1.5' y='1.5' width='29' height='29' rx='9' fill='%23fff' stroke='%23111316' stroke-width='2.4'/%3E%3Crect x='6.5' y='6.5' width='19' height='19' rx='4.4' stroke='%23FF5A1F' stroke-width='2.4'/%3E%3Cpath d='M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3' stroke='%23111316' stroke-width='2.2'/%3E%3C/svg%3E">
@@ -38,31 +50,31 @@
     <!-- The examples are the real elements with real attributes. Selecting one copies those attributes into the Studio. -->
     <div class="showcase" id="examples" aria-label="Live examples" data-showcase>
       <div class="showcase__row showcase__row--large">
-        <button type="button" class="show" data-show="calendar" aria-label="Customise the calendar in the Studio">
+        <button type="button" class="show" data-show="calendar">
           <bezel-calendar theme="snow" aria-hidden="true"></bezel-calendar>
-          <span class="show__label"><b>Calendar</b><span>The whole month</span></span>
+          <span class="show__label"><b>Calendar</b><span>The whole month</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
-        <button type="button" class="show" data-show="poster" aria-label="Customise the poster calendar in the Studio">
+        <button type="button" class="show" data-show="poster">
           <bezel-poster theme="noir" aria-hidden="true"></bezel-poster>
-          <span class="show__label"><b>Poster</b><span>A month, set large</span></span>
+          <span class="show__label"><b>Poster</b><span>A month, set large</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
       </div>
       <div class="showcase__row">
-        <button type="button" class="show" data-show="clock" aria-label="Customise the numerals clock in the Studio">
+        <button type="button" class="show" data-show="clock">
           <bezel-clock variant="numerals" theme="sage" aria-hidden="true"></bezel-clock>
-          <span class="show__label"><b>Clock</b><span>Numerals</span></span>
+          <span class="show__label"><b>Clock</b><span>Numerals</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
-        <button type="button" class="show" data-show="weather" aria-label="Customise the weather tile in the Studio">
+        <button type="button" class="show" data-show="weather">
           <bezel-weather location="London" aria-hidden="true"></bezel-weather>
-          <span class="show__label"><b>Weather</b><span>Live sky</span></span>
+          <span class="show__label"><b>Weather</b><span>Live sky</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
-        <button type="button" class="show" data-show="glance" aria-label="Customise the glance tile in the Studio">
+        <button type="button" class="show" data-show="glance">
           <bezel-glance theme="orchid" location="London" aria-hidden="true"></bezel-glance>
-          <span class="show__label"><b>Glance</b><span>Clock, date, weather</span></span>
+          <span class="show__label"><b>Glance</b><span>Clock, date, weather</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
-        <button type="button" class="show" data-show="clock" aria-label="Customise the classic clock in the Studio">
+        <button type="button" class="show" data-show="clock">
           <bezel-clock variant="classic" theme="midnight" hands="lollipop" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
-          <span class="show__label"><b>Classic</b><span>Two time zones</span></span>
+          <span class="show__label"><b>Classic</b><span>Two time zones</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
       </div>
     </div>
@@ -93,7 +105,7 @@
         </div>
       </div>
 
-      <form class="panel" data-panel autocomplete="off" aria-label="Tile settings"></form>
+      <div class="panel" data-panel></div>
     </div>
     <p class="studio__note" data-note role="status" aria-live="polite"></p>
   </section>
@@ -138,7 +150,7 @@
         </div>
         <div class="way__codes">
           <pre class="code" tabindex="0"><code data-code="web-cdn">&lt;script type="module"
-  src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.2.0/dist/bezel.min.js"&gt;&lt;/script&gt;
+  src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.0.0/dist/bezel.min.js"&gt;&lt;/script&gt;
 
 &lt;bezel-clock variant="relief"&gt;&lt;/bezel-clock&gt;</code></pre>
           <pre class="code" tabindex="0"><code data-code="web-npm">npm install github:ShazMoghaddam/bezel
@@ -195,14 +207,14 @@ import 'bezel-tiles';</code></pre>
   <div class="foot__layer">
   <div class="foot__in">
     <div class="foot__about">
-      <a class="mark" href="#top" aria-label="Back to the top"><svg class="mark__glyph" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="mark__outer" x="1.5" y="1.5" width="29" height="29" rx="9"/><rect class="mark__inner" x="6.5" y="6.5" width="19" height="19" rx="4.4"/><path class="mark__b" d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3"/></svg>Bezel</a>
-      <p class="foot__eyebrow">Open-source web components · v1.2</p>
+      <a class="mark" href="#top" aria-label="Bezel, back to the top"><svg class="mark__glyph" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="mark__outer" x="1.5" y="1.5" width="29" height="29" rx="9"/><rect class="mark__inner" x="6.5" y="6.5" width="19" height="19" rx="4.4"/><path class="mark__b" d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3"/></svg>Bezel</a>
+      <p class="foot__eyebrow">Open-source web components · v2.0</p>
       <p class="foot__lede">Seven tile faces drawn entirely in vectors, so they stay crisp from a 120&nbsp;px widget to a 4K desk display. Restyle every colour, frame and font, then drop one line of HTML into any site, an old iPad, or your Mac desktop.</p>
     </div>
 
     <dl class="foot__specs">
       <div><dt>Dependencies</dt><dd>0</dd></div>
-      <div><dt>Gzipped</dt><dd>22 kB</dd></div>
+      <div><dt>Gzipped</dt><dd>25 kB</dd></div>
       <div><dt>Weather API key</dt><dd>None needed</dd></div>
     </dl>
 
