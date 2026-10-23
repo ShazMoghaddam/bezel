@@ -11,7 +11,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='1.5' y='1.5' width='29' height='29' rx='9' fill='%23fff' stroke='%23111316' stroke-width='2.4'/%3E%3Crect x='6.5' y='6.5' width='19' height='19' rx='4.4' stroke='%23FF5A1F' stroke-width='2.4'/%3E%3Cpath d='M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3' stroke='%23111316' stroke-width='2.2'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Fraunces:opsz,wght@9..144,300..800&family=Nunito:wght@300..900&display=swap">
 <link rel="stylesheet" href="site.css">
 <script type="module" src="../src/index.js"></script>
 <script type="module" src="site.js"></script>
@@ -191,6 +191,8 @@ import 'bezel-tiles';</code></pre>
 </main>
 
 <footer class="foot">
+  <!-- One layer of content. site.js copies it once more in deep indigo for the periwinkle half; each copy is clipped to its own triangle. -->
+  <div class="foot__layer">
   <div class="foot__in">
     <div class="foot__about">
       <a class="mark" href="#top" aria-label="Back to the top"><svg class="mark__glyph" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="mark__outer" x="1.5" y="1.5" width="29" height="29" rx="9"/><rect class="mark__inner" x="6.5" y="6.5" width="19" height="19" rx="4.4"/><path class="mark__b" d="M12.6 10.6v10.8M12.6 10.6h3.7a2.7 2.7 0 0 1 0 5.4h-3.7M12.6 16h4.3a2.7 2.7 0 0 1 0 5.4h-4.3"/></svg>Bezel</a>
@@ -218,7 +220,7 @@ import 'bezel-tiles';</code></pre>
       <h2 class="foot__h">Credits</h2>
       <ul>
         <li>Weather by <a href="https://open-meteo.com">Open-Meteo</a> (CC BY 4.0)</li>
-        <li>Fonts: <a href="https://fonts.google.com/specimen/Geist">Geist</a> (OFL)</li>
+        <li>Fonts: <a href="https://fonts.google.com/specimen/Geist">Geist</a>, <a href="https://fonts.google.com/specimen/Fraunces">Fraunces</a> and <a href="https://fonts.google.com/specimen/Nunito">Nunito</a> (OFL)</li>
         <li><a href="https://github.com/ShazMoghaddam/bezel/blob/main/LICENSE">MIT licence</a></li>
       </ul>
     </div>
@@ -229,6 +231,7 @@ import 'bezel-tiles';</code></pre>
       <p>Designed by <a href="https://shazmoghaddam.github.io">Shaz Moghaddam</a>, London</p>
       <p class="foot__copy">© 2026 · Free to use under the MIT licence</p>
     </div>
+  </div>
   </div>
 </footer>
 
