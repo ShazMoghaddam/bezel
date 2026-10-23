@@ -15,6 +15,9 @@ export const FRAME_CSS = /* css */ `
   /* No metal rim: the black bezel is the outermost layer, so nothing light shows around it. */
   --_rim-pad: 0px;
   --_bezel-pad: var(--bezel-thickness, 1.7cqw);
+  /* Extra inset for content when corners are rounder than the 22cqw the layouts were drawn for,
+     so text near a corner never runs into the curve. Zero at the default radius and below. */
+  --_safe: max(0cqw, calc((var(--_rim-r) - 22cqw) * 0.36));
   display: inline-block;
   position: relative;
   box-sizing: border-box;

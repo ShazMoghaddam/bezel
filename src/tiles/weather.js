@@ -43,22 +43,80 @@ const SKIES = {
 
 const CLOUDS = { clear: 0, partly: 3, cloudy: 6, fog: 0, drizzle: 6, rain: 6, snow: 5, storm: 6 };
 
-function cloudLayer(count, dim) {
-  const seeds = [
-    [52, 10, 62, 0.62, 52],
-    [-12, 22, 66, 0.55, 64],
-    [30, 34, 58, 0.42, 58],
-    [66, 48, 52, 0.38, 72],
-    [-6, 58, 56, 0.3, 60],
-    [40, 66, 60, 0.26, 80],
-  ];
-  return seeds
-    .slice(0, count)
-    .map(
-      ([x, y, w, o, dur], i) =>
-        `<i class="cloud" style="--x:${x}cqw;--y:${y}cqh;--w:${w}cqw;--o:${(o * (dim ? 0.55 : 1)).toFixed(2)};--d:${dur}s;--delay:${-i * 7}s"></i>`,
-    )
-    .join('');
+/*
+ * The sky art is SVG in a 100 x 100 box, scaled to cover the tile, so every shape stays sharp at
+ * any size. Shapes use soft gradients rather than blur, which keeps them gentle without going fuzzy.
+ * Animations are plain CSS on SVG groups, so `still` and reduced motion turn them off as before.
+ */
+
+// [x, y, width, opacity, drift seconds] in percent of the tile.
+// The first three make a partly cloudy sky around the sun; all six make an overcast one.
+// Later clouds sit lower and fainter so the temperature stays easy to read.
+const CLOUD_SEEDS = [
+  [56, 25, 48, 0.96, 52],
+  [-18, 10, 58, 0.7, 64],
+  [26, 48, 52, 0.5, 58],
+  [62, 58, 50, 0.46, 72],
+  [-12, 66, 58, 0.4, 60],
+  [32, 78, 62, 0.32, 80],
+];
+
+// Cloud tops and undersides by weather and time of day.
+const CLOUD_TONES = {
+  day: ['#FFFFFF', '#D9E3EF'],
+  grey: ['#F1F4F8', '#B4BFCC'],
+  storm: ['#C6CDD8', '#7C8695'],
+  night: ['#8A96AC', '#4A566C'],
+};
+
+const f1 = (n) => Number(n.toFixed(2));
+
+/** One cloud: overlapping puffs on a rounded base, filled with a single top-to-bottom gradient. */
+function cloud([x, y, w, o, dur], i, dim) {
+  const k = w / 48; // the cloud is drawn 48 x 22 units, then scaled
+  const puffs = '<circle cx="13" cy="14" r="8"/><circle cx="23" cy="9.5" r="10"/><circle cx="34" cy="12" r="8.5"/><circle cx="41.5" cy="15.5" r="6"/><ellipse cx="25" cy="17" rx="19" ry="5"/>';
+  return `<g class="drift" style="--d:${dur}s;--delay:${-i * 7}s"><g transform="translate(${x} ${y}) scale(${f1(k)})" opacity="${f1(o * (dim ? 0.6 : 1))}">
+      <g class="cloud-shade" transform="translate(0.8 1.6)">${puffs}</g>
+      <g class="cloud-body">${puffs}</g>
+    </g></g>`;
+}
+
+const STARS = [[12, 18, 0.35], [28, 9, 0.28], [47, 22, 0.32], [66, 12, 0.26], [84, 26, 0.36], [74, 40, 0.24], [18, 44, 0.3], [92, 8, 0.24], [38, 34, 0.22], [57, 5, 0.3], [6, 30, 0.22], [90, 46, 0.2]];
+
+function skyArt(sky, isDay) {
+  const tone = !isDay ? CLOUD_TONES.night : sky === 'storm' ? CLOUD_TONES.storm : sky === 'rain' || sky === 'drizzle' || sky === 'snow' ? CLOUD_TONES.grey : CLOUD_TONES.day;
+  const defs = `<defs>
+      <mask id="moon-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="80.4" cy="29.4" r="5.9" fill="#000"/></mask>
+      <linearGradient id="cloud-fill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="22"><stop offset="0" stop-color="${tone[0]}"/><stop offset="1" stop-color="${tone[1]}"/></linearGradient>
+      <radialGradient id="sun-disc" cx=".4" cy=".38" r=".7"><stop offset="0" stop-color="#FFFDF2"/><stop offset=".55" stop-color="#FFEFB0"/><stop offset="1" stop-color="#FFD966"/></radialGradient>
+      <radialGradient id="sun-halo"><stop offset="0" stop-color="#FFF4CC" stop-opacity=".75"/><stop offset=".35" stop-color="#FFE7A3" stop-opacity=".28"/><stop offset="1" stop-color="#FFE7A3" stop-opacity="0"/></radialGradient>
+      <radialGradient id="moon-halo"><stop offset="0" stop-color="#E8ECF8" stop-opacity=".35"/><stop offset="1" stop-color="#E8ECF8" stop-opacity="0"/></radialGradient>
+      <radialGradient id="fog-fill"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".6" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <pattern id="rain-p" patternUnits="userSpaceOnUse" width="11" height="16"><g stroke="#fff" stroke-opacity=".55" stroke-width=".3" stroke-linecap="round"><line x1="2.4" y1="0.5" x2="1.7" y2="4"/><line x1="8.2" y1="8.6" x2="7.5" y2="12.1"/><line x1="5.3" y1="12.4" x2="4.9" y2="14.4"/></g></pattern>
+      <pattern id="snow-p" patternUnits="userSpaceOnUse" width="24" height="24"><g fill="#fff" fill-opacity=".92"><circle cx="3" cy="4" r=".75"/><circle cx="14" cy="2" r=".5"/><circle cx="20" cy="11" r=".8"/><circle cx="8" cy="15" r=".55"/><circle cx="17" cy="20" r=".65"/><circle cx="2" cy="22" r=".45"/></g></pattern>
+    </defs>`;
+
+  const parts = [];
+  if (isDay && (sky === 'clear' || sky === 'partly')) {
+    parts.push(`<g class="sun"${sky === 'partly' ? ' opacity=".85"' : ''}><circle class="glow" cx="77" cy="32" r="34" fill="url(#sun-halo)"/><circle cx="77" cy="32" r="9.5" fill="url(#sun-disc)"/></g>`);
+  }
+  if (!isDay && (sky === 'clear' || sky === 'partly')) {
+    parts.push(`<g class="stars">${STARS.map(([x, y, r], i) => `<circle cx="${x}" cy="${y}" r="${r}" style="--delay:${-i * 0.7}s"/>`).join('')}</g>`);
+    // A crescent, cut out with a mask so the sky shows through cleanly.
+    parts.push(`<g class="moon"><circle cx="77" cy="32" r="20" fill="url(#moon-halo)"/><circle cx="77" cy="32" r="6.5" fill="#EEF1F8" mask="url(#moon-cut)"/></g>`);
+  }
+  const count = CLOUDS[sky] ?? 3;
+  if (count) parts.push(`<g class="clouds">${CLOUD_SEEDS.slice(0, count).map((seed, i) => cloud(seed, i, !isDay)).join('')}</g>`);
+  if (sky === 'fog') {
+    parts.push(`<g class="fog">${[22, 50, 74].map((y, i) => `<g class="drift" style="--d:40s;--delay:${-i * 12}s"><ellipse cx="${[40, 62, 36][i]}" cy="${y}" rx="78" ry="9" fill="url(#fog-fill)"/></g>`).join('')}</g>`);
+  }
+  if (sky === 'drizzle' || sky === 'rain' || sky === 'storm') {
+    parts.push(`<g class="rain${sky === 'drizzle' ? ' light' : ''}"><rect class="fall" x="-20" y="-30" width="140" height="160" fill="url(#rain-p)"/></g>`);
+  }
+  if (sky === 'snow') {
+    parts.push(`<g class="snowfall"><rect class="fall" x="-20" y="-40" width="140" height="180" fill="url(#snow-p)"/><rect class="fall slow" x="-20" y="-40" width="140" height="180" fill="url(#snow-p)" transform="translate(9 5) scale(1.4)" opacity=".55"/></g>`);
+  }
+  return `<svg class="art" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${defs}${parts.join('')}</svg>`;
 }
 
 class BezelWeather extends BezelElement {
@@ -77,53 +135,27 @@ class BezelWeather extends BezelElement {
     @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
     .sky::after { content: ""; position: absolute; inset: 0; z-index: 2;
       background: linear-gradient(180deg, rgba(8,20,40,.30) 0%, rgba(8,20,40,.08) 30%, rgba(8,20,40,0) 52%, rgba(8,20,40,0) 70%, rgba(8,20,40,.18) 100%); }
-    .sun { position: absolute; inset-block-start: -22cqh; inset-inline-end: -18cqw; inline-size: 80cqw; aspect-ratio: 1; border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,246,214,.75) 0%, rgba(255,226,150,.28) 26%, rgba(255,226,150,0) 62%); }
-    .stars { position: absolute; inset: 0; opacity: .8;
-      background-image:
-        radial-gradient(0.35cqw 0.35cqw at 12% 18%, #fff 50%, transparent 52%),
-        radial-gradient(0.25cqw 0.25cqw at 28% 9%, #fff 50%, transparent 52%),
-        radial-gradient(0.3cqw 0.3cqw at 47% 22%, #fff 50%, transparent 52%),
-        radial-gradient(0.22cqw 0.22cqw at 66% 12%, #fff 50%, transparent 52%),
-        radial-gradient(0.32cqw 0.32cqw at 84% 26%, #fff 50%, transparent 52%),
-        radial-gradient(0.2cqw 0.2cqw at 74% 40%, #fff 50%, transparent 52%),
-        radial-gradient(0.26cqw 0.26cqw at 18% 44%, #fff 50%, transparent 52%),
-        radial-gradient(0.2cqw 0.2cqw at 92% 8%, #fff 50%, transparent 52%);
-      animation: twinkle 6s ease-in-out infinite alternate; }
-    .cloud { position: absolute; inset-inline-start: var(--x); inset-block-start: var(--y); inline-size: var(--w); aspect-ratio: 2.2; opacity: var(--o);
-      background:
-        radial-gradient(38% 62% at 30% 62%, #fff 0 58%, transparent 72%),
-        radial-gradient(34% 70% at 55% 42%, #fff 0 56%, transparent 72%),
-        radial-gradient(30% 54% at 78% 64%, #fff 0 56%, transparent 72%),
-        radial-gradient(60% 40% at 52% 78%, #fff 0 60%, transparent 76%);
-      filter: blur(0.9cqw);
-      animation: drift var(--d) ease-in-out var(--delay) infinite alternate; }
-    .fogband { position: absolute; inset-inline: -20cqw; block-size: 18cqh; border-radius: 50%;
-      background: radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.55), transparent 70%);
-      filter: blur(1.5cqw); animation: drift 40s ease-in-out infinite alternate; }
-    .rain { position: absolute; inset: -20cqh 0 0; opacity: .38;
-      background-image: repeating-linear-gradient(104deg, transparent 0 2.6cqw, rgba(255,255,255,.75) 2.6cqw 2.75cqw, transparent 2.75cqw 5.2cqw);
-      -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 4cqh, transparent 4cqh 9cqh);
-              mask-image: repeating-linear-gradient(180deg, #000 0 4cqh, transparent 4cqh 9cqh);
-      animation: fall .55s linear infinite; }
-    .rain.light { opacity: .22; animation-duration: .9s; }
-    .snowfall { position: absolute; inset: -40cqh 0 0;
-      background-image:
-        radial-gradient(0.7cqw 0.7cqw at 20% 10%, rgba(255,255,255,.9) 50%, transparent 55%),
-        radial-gradient(0.5cqw 0.5cqw at 60% 30%, rgba(255,255,255,.85) 50%, transparent 55%),
-        radial-gradient(0.8cqw 0.8cqw at 80% 60%, rgba(255,255,255,.9) 50%, transparent 55%),
-        radial-gradient(0.55cqw 0.55cqw at 35% 75%, rgba(255,255,255,.8) 50%, transparent 55%);
-      background-size: 30cqw 30cqh;
-      animation: snow 9s linear infinite; }
+    .art { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+    .cloud-body * { fill: url(#cloud-fill); }
+    .cloud-shade * { fill: rgba(15, 35, 70, .12); }
+    .drift { animation: art-drift var(--d) ease-in-out var(--delay) infinite alternate; }
+    .sun .glow { transform-origin: 77px 32px; animation: art-glow 7s ease-in-out infinite alternate; }
+    .stars circle { fill: #fff; animation: art-twinkle 5s ease-in-out var(--delay) infinite alternate; }
+    .rain .fall { animation: art-rain .55s linear infinite; }
+    .rain.light { opacity: .6; }
+    .rain.light .fall { animation-duration: .9s; }
+    .snowfall .fall { animation: art-snow 7s linear infinite; }
+    .snowfall .fall.slow { animation-duration: 11s; }
     .flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash 7s infinite; }
     :host([still]) .sky * { animation: none !important; }
-    @keyframes drift { to { translate: 9cqw 0; } }
-    @keyframes fall { to { translate: -2.2cqw 9cqh; } }
-    @keyframes snow { to { translate: 3cqw 30cqh; } }
-    @keyframes twinkle { to { opacity: .45; } }
+    @keyframes art-drift { to { translate: 9px 0; } }
+    @keyframes art-glow { to { scale: 1.08; opacity: .8; } }
+    @keyframes art-twinkle { to { opacity: .35; } }
+    @keyframes art-rain { to { translate: 0 16px; } }
+    @keyframes art-snow { to { translate: 0 24px; } }
     @keyframes flash { 0%, 91%, 93%, 95%, 100% { opacity: 0; } 92%, 94% { opacity: .35; } }
 
-    .content { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; padding: 8cqw 8cqw 7.5cqw;
+    .content { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; padding: calc(8cqw + var(--_safe)) calc(8cqw + var(--_safe)) calc(7.5cqw + var(--_safe));
       text-shadow: 0 0.15cqw 0.6cqw rgba(0,0,0,.18), 0 0 2.4cqw rgba(0,0,0,.12); z-index: 3; }
     .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 3cqw; }
     .meta { display: grid; gap: 0.6cqw; font-size: 4.6cqw; font-weight: 600; line-height: 1.15; min-inline-size: 0; }
@@ -177,15 +209,7 @@ class BezelWeather extends BezelElement {
     const isDay = w ? w.isDay : true;
     const [s0, s1, s2] = SKIES[`${sky}-${isDay ? 'day' : 'night'}`] ?? SKIES['partly-day'];
 
-    const layers = [];
-    if (sky === 'clear' && isDay) layers.push('<i class="sun"></i>');
-    if (!isDay && (sky === 'clear' || sky === 'partly')) layers.push('<i class="stars"></i>');
-    if (sky === 'partly' && isDay) layers.push('<i class="sun" style="opacity:.7"></i>');
-    layers.push(cloudLayer(CLOUDS[sky] ?? 3, !isDay));
-    if (sky === 'fog') layers.push('<i class="fogband" style="top:22cqh"></i><i class="fogband" style="top:52cqh;animation-delay:-12s"></i><i class="fogband" style="top:74cqh;animation-delay:-24s"></i>');
-    if (sky === 'drizzle') layers.push('<i class="rain light"></i>');
-    if (sky === 'rain' || sky === 'storm') layers.push('<i class="rain"></i>');
-    if (sky === 'snow') layers.push('<i class="snowfall"></i>');
+    const layers = [skyArt(sky, isDay)];
     if (sky === 'storm') layers.push('<i class="flash"></i>');
     layers.push('<i class="tint"></i>');
 

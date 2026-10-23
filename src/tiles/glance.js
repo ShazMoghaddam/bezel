@@ -62,7 +62,7 @@ class BezelGlance extends BezelElement {
 
   static styles = /* css */ `
     .screen { background: radial-gradient(120% 100% at 20% 0%, color-mix(in srgb, var(--_surface), #fff 10%), var(--_surface) 60%); }
-    .g { position: absolute; inset: 0; display: grid; grid-template: 1fr auto / 1fr 1fr; gap: 3cqw 5cqw; padding: 8cqw; }
+    .g { position: absolute; inset: 0; display: grid; grid-template: 1fr auto / 1fr 1fr; gap: 3cqw 5cqw; padding: calc(8cqw + var(--_safe)); }
     .date { display: grid; align-content: start; gap: 0; }
     .date .md { font-size: 6.6cqw; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
     .date .md b { color: var(--_accent); font-weight: 700; }

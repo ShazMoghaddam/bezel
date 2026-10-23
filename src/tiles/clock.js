@@ -114,7 +114,8 @@ class BezelClock extends BezelElement {
     /* numerals */
     .v-numerals .numeral { font-weight: var(--bezel-numeral-weight, 300); letter-spacing: -0.035em; }
     .v-numerals.s-roman .numeral { letter-spacing: -0.06em; }
-    .v-numerals .date { font-weight: 650; fill: var(--_ink); font-size: 4.3px; letter-spacing: 0.02em; }
+    .corner-date { position: absolute; z-index: 0; inset-inline-start: calc(7cqw + var(--_safe)); inset-block-end: calc(6.4cqw + var(--_safe));
+      font-weight: 650; font-size: 4.3cqw; line-height: 1; letter-spacing: 0.02em; color: var(--_ink); font-family: var(--_font); }
 
     /* relief */
     .v-relief .numeral { fill: color-mix(in srgb, var(--_surface), #000 5%); filter: url(#deboss); font-weight: 500; letter-spacing: -0.02em; transition: opacity .9s ease, font-size .9s ease; }
@@ -186,7 +187,7 @@ class BezelClock extends BezelElement {
         <g class="numerals">${items
           .map(([h, x, y]) => `<text class="numeral" x="${x}" y="${y}" font-size="${size}" text-anchor="middle">${numeral(h, script)}</text>`)
           .join('')}</g>
-        <text class="date" x="7" y="93.5"></text>`;
+`;
     } else if (v === 'relief') {
       // Numerals follow the ring, but the lower half turns to stay readable (so 6 never reads as 9).
       dial = `<g class="ring">${Array.from({ length: 12 }, (_, i) => {
@@ -263,7 +264,9 @@ class BezelClock extends BezelElement {
       </g>`;
 
     const dir = script === 'persian' ? ' direction="ltr"' : '';
-    return `<svg class="face v-${v} s-${script}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
+    // On the Numerals face the date sits in the corner, as HTML so it can move in when corners get rounder.
+    const corner = v === 'numerals' ? '<span class="date corner-date" aria-hidden="true"></span>' : '';
+    return `${corner}<svg class="face v-${v} s-${script}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
   }
 
   update(z, first) {

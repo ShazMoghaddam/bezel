@@ -1,7 +1,7 @@
 // Bezel demo site: showcase, studio, code cards and desk mode.
 // The tiles themselves come from the library; this file only drives the page.
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.0.0/dist/bezel.min.js';
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.1.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 const FONTS = [
@@ -45,11 +45,12 @@ const HAND_STYLES = [
   ['lollipop', 'Lollipop', 'Batons with a round seconds tip'],
 ];
 
-const time = [
-  { type: 'select', key: 'timezone', label: 'Time zone', options: ZONES },
-  { type: 'seg', key: 'hour-cycle', label: 'Hours', options: [['', 'Auto'], ['12', '12 h'], ['24', '24 h']] },
-  { type: 'select', key: 'locale', label: 'Language', options: LOCALES },
-];
+const timeZone = { type: 'select', key: 'timezone', label: 'Time zone', options: ZONES };
+const language = { type: 'select', key: 'locale', label: 'Language', options: LOCALES };
+/** The 12 or 24 hour choice, for tiles that show a digital time. `when` says when that time is on screen. */
+const hours = (when) => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when });
+// Analog clocks show no digits, so they skip Hours.
+const time = [timeZone, language];
 const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
 const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']] };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
@@ -71,7 +72,9 @@ const TYPES = {
     label: 'Clock',
     size: 380,
     attrs: { variant: 'numerals', theme: 'sage' },
-    colors: ['surface', 'ink', 'accent'],
+    colors: ['surface', 'ink', 'hand', 'accent'],
+    colorLabels: { accent: 'Seconds hand' },
+    colorHint: 'The seconds hand colour also tints the date on the Classic face.',
     style: [
       { type: 'seg', key: 'variant', label: 'Face', options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic']] },
       { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']] },
@@ -100,7 +103,7 @@ const TYPES = {
       { type: 'toggle', key: 'hide-time', label: 'Time in the header', invert: true },
       { type: 'toggle', key: 'hide-backdrop', label: 'Giant day numeral', invert: true },
     ],
-    time,
+    time: [timeZone, hours((a) => !a['hide-time']), language],
   },
   weather: {
     tag: 'bezel-weather',
@@ -115,14 +118,15 @@ const TYPES = {
       { type: 'toggle', key: 'still', label: 'Animated sky', invert: true },
       { type: 'toggle', key: 'hide-time', label: 'Clock in the corner', invert: true },
     ],
-    time,
+    time: [timeZone, hours((a) => !a['hide-time']), language],
   },
   glance: {
     tag: 'bezel-glance',
     label: 'Glance',
     size: 400,
     attrs: { theme: 'mist', location: 'London' },
-    colors: ['surface', 'ink', 'accent', 'soft'],
+    colors: ['surface', 'ink', 'accent', 'soft', 'hand'],
+    colorHint: 'Accent also colours the seconds hand.',
     hands: true,
     options: [
       { type: 'toggle', key: 'hide-weather', label: 'Weather corner', invert: true },
@@ -133,7 +137,7 @@ const TYPES = {
         hint: "Paste your calendar's iCal (.ics) address to list today's events. On the Mac desktop any feed works. In a browser, Google and iCloud feeds are usually blocked, and the corner then shows how far through the year you are.",
       },
     ],
-    time,
+    time: [timeZone, hours((a) => Boolean(a.ics)), language], // times appear only in a calendar agenda
   },
   poster: {
     tag: 'bezel-poster',
@@ -149,7 +153,7 @@ const TYPES = {
       { type: 'toggle', key: 'no-highlight', label: 'Highlight today', invert: true },
     ],
     // A time zone would only move which day is "today" around midnight, so the poster offers language alone.
-    time: time.slice(2),
+    time: [language],
     timeLabel: 'Language',
   },
 };
@@ -184,6 +188,8 @@ function loadState() {
       s.current = TYPES[saved.current] ? saved.current : s.current;
       s.bg = saved.bg || s.bg;
       for (const k of Object.keys(TYPES)) if (saved.tiles[k]) Object.assign(s.tiles[k], saved.tiles[k]);
+      // Corners now stop at 30; bring older, rounder settings into range.
+      for (const t of Object.values(s.tiles)) if (t.vars?.radius > 30) t.vars.radius = 30;
     }
   } catch {}
   return s;
@@ -281,8 +287,7 @@ function colorValue(type, cfg, key) {
 }
 
 function colorKeys(type) {
-  const t = TYPES[type];
-  return t.hands ? [...t.colors, 'hand'] : t.colors;
+  return TYPES[type].colors;
 }
 
 function control(c, cfg) {
@@ -292,6 +297,23 @@ function control(c, cfg) {
   const hint = c.hint ? `<p class="hint" id="${hintId}">${esc(c.hint)}</p>` : '';
   const described = hintId ? ` aria-describedby="${hintId}"` : '';
   switch (c.type) {
+    case 'hours': {
+      // Show what each choice looks like, using 14:30 in the tile's language.
+      // Some browsers report tags like "en-US@posix", which Intl rejects; trim them as the tiles do.
+      const lang = String(cfg.attrs.locale || navigator.language || 'en-GB').split(/[@.]/)[0].replace('_', '-');
+      const sample = (h12) => {
+        for (const tag of [lang, 'en-GB']) {
+          try {
+            return new Intl.DateTimeFormat(tag, { hour: 'numeric', minute: '2-digit', hour12: h12, timeZone: 'UTC' }).format(Date.UTC(2026, 0, 1, 14, 30));
+          } catch {}
+        }
+        return '';
+      };
+      const opts = [['', 'Auto', sample(undefined)], ['12', '12-hour', sample(true)], ['24', '24-hour', sample(false)]];
+      return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg seg--tall" role="group" aria-labelledby="${id}-l">${opts
+        .map(([v, l, ex]) => `<button type="button" data-attr="${c.key}" data-value="${v}" aria-pressed="${String(value) === v}"><span>${l}</span><span class="seg__s">${esc(ex)}</span></button>`)
+        .join('')}</div><p class="hint">Auto follows the language setting.</p></div>`;
+    }
     case 'seg':
       return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg" role="group" aria-labelledby="${id}-l"${described}>${c.options
         .map(([v, l]) => `<button type="button" data-attr="${c.key}" data-value="${esc(v)}" aria-pressed="${String(value) === v}">${esc(l)}</button>`)
@@ -358,8 +380,8 @@ function groupBody(type, group) {
       .map(([v, l, on]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${on}">${l}</button>`)
       .join('')}</div></div>`;
     const size = `<div class="field"><label class="field__l" for="c-size">Size <output data-out="size">${cfg.size} px</output></label><input type="range" id="c-size" min="180" max="${type === 'poster' ? 760 : 560}" step="10" value="${cfg.size}" data-size></div>`;
-    const radius = cfg.vars.radius ?? 22;
-    const corners = t.corners === false ? '' : `<div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="40" step="1" value="${radius}" data-radius></div>`;
+    const radius = Math.min(30, cfg.vars.radius ?? 22);
+    const corners = t.corners === false ? '' : `<div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="30" step="1" value="${radius}" data-radius></div>`;
     return fields(t.style) + frame + `<div class="row2${corners ? '' : ' row2--one'}">${size}${corners}</div>` + font;
   }
 
@@ -381,8 +403,8 @@ function groupBody(type, group) {
             <span class="hstyle__t">${l}</span><span class="hstyle__d">${d}</span>
           </button>`,
       ).join('')}</div></div>
-      <div class="crows">${colorRow(type, cfg, 'hand')}${colorRow(type, cfg, 'accent', 'Seconds hand')}</div>
-      ${fields(t.handControls)}`;
+      ${fields(t.handControls)}
+      <button type="button" class="link" data-goto="colours">Change hand colours in Colours</button>`;
   }
 
   if (group === 'options') return fields(t.options);
@@ -598,6 +620,11 @@ function bindStudio() {
       setGroup(tab.dataset.group);
       return;
     }
+    const go = e.target.closest('[data-goto]');
+    if (go) {
+      setGroup(go.dataset.goto);
+      return;
+    }
     if (e.target.closest('[data-reset-colors]')) {
       for (const k of colorKeys(state.current)) delete cfg.vars[k];
       renderPanel();
@@ -692,6 +719,11 @@ function bindStudio() {
     } else if (t.matches('[data-select]')) {
       cfg.attrs[t.dataset.select] = t.value;
       updatePreview();
+      // The Hours examples are written in the chosen language, so redraw them.
+      if (t.dataset.select === 'locale') {
+        renderPanel();
+        panel.querySelector('[data-select="locale"]')?.focus();
+      }
     } else if (t.matches('[data-font]')) {
       cfg.vars.font = t.value;
       updatePreview();
