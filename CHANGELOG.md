@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (2026-10-23)
+
+- Second time zone dial, refined: slim tapered hands with a short counterweight, hairline ticks, a recessed plate, and the time difference beside the city (for example "NEW YORK −5h").
+- The poster's bezel now matches every other tile: it is measured against the poster's height, so a poster and a square tile of the same height have identical bezels.
+- Studio: the preview bar is a single evenly spaced strip with "Live preview" centred; on the clock, Language only appears when a date is showing, since that is all it changes.
+
 ## 1.1.0 (2026-10-23)
 
 - Weather skies are redrawn as SVG: sun, moon, stars, clouds, rain, snow and fog stay sharp at any size, with soft gradients instead of blur. Same animations, and `still` and reduced motion still turn them off.

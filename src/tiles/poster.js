@@ -26,7 +26,9 @@ class BezelPoster extends BezelElement {
   };
 
   static styles = /* css */ `
-    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); }
+    /* Bezel thickness is a share of the tile's width, and the poster is wider than it is tall.
+       Three quarters of the usual width share gives the same bezel as a square tile of the same height. */
+    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); --_bezel-pad: var(--bezel-thickness, 1.275cqw); }
     .frame--none .screen { border-radius: var(--_rim-r); }
     .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4.2cqw 2.4cqw 2.4cqw; overflow: hidden; }
     .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }

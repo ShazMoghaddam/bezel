@@ -1,4 +1,4 @@
-/*! Bezel v1.1.0 | MIT | github.com/ShazMoghaddam/bezel */
+/*! Bezel v1.2.0 | MIT | github.com/ShazMoghaddam/bezel */
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -602,6 +602,18 @@ function numeral(h, script = "western") {
   if (script === "persian") return String(h).replace(/\d/g, (d) => PERSIAN_DIGITS[d]);
   return String(h);
 }
+function zoneOffset(ms, from, to) {
+  const wall = (tz) => {
+    const z = zoned(ms, tz);
+    return Date.UTC(z.year, z.month, z.day, z.hours, z.minutes);
+  };
+  const mins = Math.round((wall(to) - wall(from)) / 6e4);
+  if (!mins) return "";
+  const sign = mins > 0 ? "+" : "\u2212";
+  const h = Math.floor(Math.abs(mins) / 60);
+  const m = Math.abs(mins) % 60;
+  return `${sign}${h}${m ? `:${String(m).padStart(2, "0")}` : "h"}`;
+}
 function cityName(timeZone) {
   return String(timeZone ?? "").split("/").pop().replace(/_/g, " ");
 }
@@ -691,12 +703,17 @@ var BezelClock = class _BezelClock extends BezelElement {
     .tick.major { stroke-width: 0.9; }
     .v-classic .numeral { font-weight: 560; }
     .v-classic .date { font-weight: 650; fill: var(--_accent); font-size: 3.6px; letter-spacing: 0.08em; }
-    .sub .plate { fill: color-mix(in srgb, var(--_surface), var(--_ink) 6%); stroke: color-mix(in srgb, var(--_ink), transparent 80%); stroke-width: 0.3; }
-    .sub .t { stroke: var(--_ink); stroke-width: 0.4; stroke-linecap: round; opacity: .6; }
-    .sub .hand line { stroke: var(--_ink); }
-    .sub .pin { fill: var(--_accent); }
-    .sub .city { font-family: var(--_font); font-size: 2.5px; font-weight: 650; letter-spacing: 0.1em; fill: var(--_ink); opacity: .75; }
-    .sub .night { fill: color-mix(in srgb, var(--_ink), transparent 88%); }
+    /* Second time zone: a recessed sub-dial with hairline ticks and slim tapered hands. */
+    .sub .plate { fill: color-mix(in srgb, var(--_surface), var(--_ink) 5%); }
+    .sub .rim { fill: none; stroke: color-mix(in srgb, var(--_ink), transparent 82%); stroke-width: 0.22; }
+    .sub .well { fill: none; stroke: color-mix(in srgb, #000, transparent 88%); stroke-width: 0.5; }
+    .sub .t { stroke: var(--_ink); stroke-width: 0.18; stroke-linecap: round; opacity: .5; }
+    .sub .t.M { stroke-width: 0.32; opacity: .85; }
+    .sub .arm { fill: var(--_hand); }
+    .sub .pin { fill: var(--_hand); }
+    .sub .pin-dot { fill: var(--_accent); }
+    .sub .city { font-family: var(--_font); font-size: 2.3px; font-weight: 650; letter-spacing: 0.12em; fill: var(--_ink); opacity: .8; }
+    .sub .off { font-weight: 550; letter-spacing: 0.04em; opacity: .6; }
 
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
@@ -772,19 +789,22 @@ var BezelClock = class _BezelClock extends BezelElement {
       if (zone) {
         const sx = C;
         const sy = 68;
-        const subTicks = Array.from(
-          { length: 12 },
-          (_, i) => `<line class="t" x1="${sx}" y1="${sy - 7.6}" x2="${sx}" y2="${sy - (i % 3 === 0 ? 6.2 : 6.9)}" transform="rotate(${i * 30} ${sx} ${sy})" />`
-        ).join("");
+        const subTicks = Array.from({ length: 12 }, (_, i) => {
+          const major = i % 3 === 0;
+          return `<line class="t${major ? " M" : ""}" x1="${sx}" y1="${sy - 7.5}" x2="${sx}" y2="${sy - (major ? 6.1 : 6.75)}" transform="rotate(${i * 30} ${sx} ${sy})" />`;
+        }).join("");
         const label = this.getAttribute("second-label") || cityName(zone);
+        const arm = (cls, length, base, tip) => `<g class="${cls}"><path class="arm" d="${baton(sx, sy + 1.1, length + 1.1, base, tip)}" /></g>`;
         sub = `<g class="sub">
           <circle class="plate" cx="${sx}" cy="${sy}" r="8.6" />
-          <path class="night" d="" />
+          <circle class="well" cx="${sx}" cy="${sy}" r="8.35" />
+          <circle class="rim" cx="${sx}" cy="${sy}" r="8.6" />
           ${subTicks}
-          ${hand({ cls: "sub-hour", stem: 1.4, length: 4.4, width: 1.1, cx: sx, cy: sy })}
-          ${hand({ cls: "sub-minute", stem: 1.4, length: 6.6, width: 1.1, cx: sx, cy: sy })}
-          <circle class="pin" cx="${sx}" cy="${sy}" r="0.7" />
-          <text class="city" x="${sx}" y="${sy + 13.2}" text-anchor="middle">${esc(label.toLocaleUpperCase(this.locale))}</text>
+          ${arm("sub-hour", 4.3, 0.42, 0.3)}
+          ${arm("sub-minute", 6.5, 0.34, 0.22)}
+          <circle class="pin" cx="${sx}" cy="${sy}" r="0.75" />
+          <circle class="pin-dot" cx="${sx}" cy="${sy}" r="0.32" />
+          <text class="city" x="${sx}" y="${sy + 13}" text-anchor="middle">${esc(label.toLocaleUpperCase(this.locale))}<tspan class="off" dx="1.2"></tspan></text>
         </g>`;
       }
       dial = `${ticks}${nums}${sub}<text class="date" x="${C}" y="${zone ? C - 15 : C + 16}" text-anchor="middle"></text>`;
@@ -831,6 +851,8 @@ var BezelClock = class _BezelClock extends BezelElement {
         const s = handAngles(zoned(z.ms, zone), { smooth: false });
         this.$(".sub-hour")?.setAttribute("transform", `rotate(${s.hour.toFixed(2)} ${C} 68)`);
         this.$(".sub-minute")?.setAttribute("transform", `rotate(${s.minute.toFixed(2)} ${C} 68)`);
+        const off = this.$(".sub .off");
+        if (off) off.textContent = zoneOffset(z.ms, this.timeZone, zone);
       }
     }
     if (this.variant === "relief" && (first || z.seconds !== this.#reliefSecond)) {
@@ -1975,7 +1997,9 @@ var BezelPoster = class extends BezelElement {
   static styles = (
     /* css */
     `
-    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); }
+    /* Bezel thickness is a share of the tile's width, and the poster is wider than it is tall.
+       Three quarters of the usual width share gives the same bezel as a square tile of the same height. */
+    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); --_bezel-pad: var(--bezel-thickness, 1.275cqw); }
     .frame--none .screen { border-radius: var(--_rim-r); }
     .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4.2cqw 2.4cqw 2.4cqw; overflow: hidden; }
     .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }
@@ -2026,7 +2050,7 @@ var BezelPoster = class extends BezelElement {
 define("bezel-poster", BezelPoster);
 
 // src/index.js
-var version = "1.1.0";
+var version = "1.2.0";
 export {
   BezelCalendar,
   BezelClock,

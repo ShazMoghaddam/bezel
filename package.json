@@ -1,6 +1,6 @@
 {
   "name": "bezel-tiles",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "High-definition, customisable clock, calendar and weather tiles as zero-dependency web components. Works on any website, as a desk display, or on the macOS desktop via Übersicht.",
   "type": "module",
   "main": "dist/bezel.js",

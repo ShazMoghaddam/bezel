@@ -1,7 +1,7 @@
 // Bezel demo site: showcase, studio, code cards and desk mode.
 // The tiles themselves come from the library; this file only drives the page.
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.1.0/dist/bezel.min.js';
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.2.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 const FONTS = [
@@ -51,6 +51,8 @@ const language = { type: 'select', key: 'locale', label: 'Language', options: LO
 const hours = (when) => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when });
 // Analog clocks show no digits, so they skip Hours.
 const time = [timeZone, language];
+// On the clock, language only changes the date ("Fri 23" or "ven. 23"), so it shows only when there is one.
+const clockTime = [timeZone, { ...language, when: (a) => a.variant !== 'relief' && !a['hide-date'] }];
 const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
 const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']] };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
@@ -89,7 +91,7 @@ const TYPES = {
       { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' },
       { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'None'], ...ZONES.slice(1)], hint: 'A small dial for another city, in place of the 6.', when: (a) => a.variant === 'classic' },
     ],
-    time,
+    time: clockTime,
   },
   calendar: {
     tag: 'bezel-calendar',

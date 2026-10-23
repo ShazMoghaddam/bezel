@@ -146,7 +146,11 @@ test('clock numerals: Roman uses IIII, Persian uses Persian digits', async () =>
 test('classic clock shows a second time zone dial in place of the 6', async () => {
   const el = mount('<bezel-clock variant="classic" second-timezone="Asia/Tokyo" timezone="Europe/London"></bezel-clock>');
   await flush();
-  assert.equal(el.shadowRoot.querySelector('.city').textContent, 'TOKYO');
+  const city = el.shadowRoot.querySelector('.city');
+  assert.ok(city.textContent.startsWith('TOKYO'));
+  // Tokyo is always ahead of London, by 8 or 9 hours depending on British Summer Time.
+  assert.match(city.querySelector('.off').textContent, /^\+(8|9)h$/);
+  assert.ok(el.shadowRoot.querySelector('.sub .arm'), 'slim tapered hands');
   const nums = [...el.shadowRoot.querySelectorAll('.numeral')].map((n) => n.textContent);
   assert.ok(!nums.includes('6'));
   assert.match(el.getAttribute('aria-label'), /in Tokyo/);

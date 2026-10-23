@@ -25,7 +25,7 @@ const f = (n) => Number(n.toFixed(3));
  * A tapered baton pointing at 12 o'clock: `base` half-width at the hub,
  * `tip` half-width at the end, both ends rounded.
  */
-function baton(cx, cy, length, base, tip) {
+export function baton(cx, cy, length, base, tip) {
   const top = cy - length;
   return `M${f(cx - base)} ${f(cy)} L${f(cx - tip)} ${f(top)} A${f(tip)} ${f(tip)} 0 0 1 ${f(cx + tip)} ${f(top)} L${f(cx + base)} ${f(cy)} A${f(base)} ${f(base)} 0 0 1 ${f(cx - base)} ${f(cy)} Z`;
 }

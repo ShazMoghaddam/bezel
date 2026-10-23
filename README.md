@@ -28,7 +28,7 @@ Drop one line of HTML into any website, turn a spare iPad into a desk clock, or 
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.1.0/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.2.0/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>
@@ -68,7 +68,7 @@ An analog clock with three faces.
 | `hands`        | `modern`, `lollipop`                     | `modern`         |
 | `hide-seconds` | boolean                                  | off              |
 | `hide-date`    | boolean                                  | off              |
-| `second-timezone` | classic face: a small dial for another city, e.g. `Asia/Tokyo` |  |
+| `second-timezone` | classic face: a small dial for another city, with the time difference, e.g. `Asia/Tokyo` |  |
 | `second-label` | name under that dial                     | the city name    |
 
 Roman numerals write four as IIII, as most clock dials do. Persian numerals use the Persian digits ۱ to ۱۲. On the classic face, a second time zone replaces the 6 with a small dial, as on a watch.
