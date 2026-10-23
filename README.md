@@ -10,7 +10,7 @@ Drop one line of HTML into any website, turn a spare iPad into a desk clock, or 
 - **Sharp at any size.** Every face is vector SVG and CSS sized in container units, so a tile is equally crisp at 120 px or across a 4K monitor.
 - **Customisable.** Built-in themes, any colour you like through CSS variables, three frame styles, your own typeface, 12 or 24 hour time, any time zone and language.
 - **Live data, no keys.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), which is free and needs no API key. Agendas read standard `.ics` calendar feeds.
-- **Light.** About 21 kB gzipped, no dependencies, no build step needed. All tiles on a page share one timer and pause when off screen.
+- **Light.** About 22 kB gzipped, no dependencies, no build step needed. All tiles on a page share one timer and pause when off screen.
 - **Accessible.** Each tile is labelled for screen readers with the current time, date or conditions, and honours reduced-motion settings.
 
 ## Contents
@@ -28,7 +28,7 @@ Drop one line of HTML into any website, turn a spare iPad into a desk clock, or 
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.0.0/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.1.0/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>

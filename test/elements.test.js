@@ -213,3 +213,35 @@ test('device frame has no light rim outside the black bezel', async () => {
   assert.match(css, /--_rim-pad: 0px/);
   el.remove();
 });
+
+test('weather sky is drawn as SVG for every condition, day and night', async () => {
+  const el = mount('<bezel-weather location="Nowhere" units="metric" still></bezel-weather>');
+  await new Promise((r) => setTimeout(r, 20));
+  const base = { ...el.weather, sample: false, place: 'Oslo', temperature: 4, condition: 'x' };
+  const expect = { clear: '.sun', partly: '.clouds', cloudy: '.clouds', fog: '.fog', drizzle: '.rain.light', rain: '.rain', snow: '.snowfall', storm: '.rain' };
+  for (const [sky, sel] of Object.entries(expect)) {
+    el.weather = { ...base, sky, isDay: true };
+    await flush();
+    assert.ok(el.shadowRoot.querySelector('svg.art'), `${sky} has svg art`);
+    assert.ok(el.shadowRoot.querySelector(`.art ${sel}`), `${sky} draws ${sel}`);
+  }
+  el.weather = { ...base, sky: 'clear', isDay: false };
+  await flush();
+  assert.ok(el.shadowRoot.querySelector('.art .moon') && el.shadowRoot.querySelector('.art .stars'));
+  assert.equal(el.shadowRoot.querySelector('.art .sun'), null);
+  el.remove();
+});
+
+test('rounder corners add a safe inset, and the numerals date can follow it', async () => {
+  const el = mount('<bezel-clock variant="numerals"></bezel-clock>');
+  await flush();
+  const css = el.shadowRoot.querySelector('style').textContent;
+  assert.match(css, /--_safe: max\(0cqw, calc\(\(var\(--_rim-r\) - 22cqw\)/);
+  const date = el.shadowRoot.querySelector('.corner-date');
+  assert.ok(date, 'corner date is HTML');
+  assert.match(date.textContent, /\d/);
+  el.setAttribute('variant', 'classic');
+  await flush();
+  assert.equal(el.shadowRoot.querySelector('.corner-date'), null);
+  el.remove();
+});

@@ -28,7 +28,7 @@ class BezelCalendar extends BezelElement {
       position: absolute; inset: 0;
       display: grid;
       grid-template-rows: auto auto 1fr;
-      padding: 8.5cqw 7.5cqw 7cqw;
+      padding: calc(8.5cqw + var(--_safe)) calc(7.5cqw + var(--_safe)) calc(7cqw + var(--_safe));
       gap: 2.6cqw;
     }
     .head { display: flex; justify-content: space-between; align-items: baseline; font-size: 6.4cqw; font-weight: 640; letter-spacing: -0.01em; color: var(--_accent); position: relative; z-index: 1; }
