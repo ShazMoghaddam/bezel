@@ -4,11 +4,18 @@
 const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v1.2.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
+// [CSS value, label, Google Fonts family spec]. The copied code includes the line that loads the chosen face.
 const FONTS = [
-  ['', 'Default'],
-  ['"Geist", sans-serif', 'Geist'],
-  ['"Geist Mono", monospace', 'Geist Mono'],
+  ['', 'Default', ''],
+  ['"Geist", sans-serif', 'Geist', 'Geist:wght@300..800'],
+  ['"Fraunces", serif', 'Fraunces (serif)', 'Fraunces:opsz,wght@9..144,300..800'],
+  ['"Nunito", sans-serif', 'Nunito (rounded)', 'Nunito:wght@300..900'],
+  ['"Geist Mono", monospace', 'Geist Mono', 'Geist+Mono:wght@400..600'],
 ];
+const fontLink = (value) => {
+  const spec = FONTS.find(([v]) => v === value)?.[2];
+  return spec ? `https://fonts.googleapis.com/css2?family=${spec}&display=swap` : '';
+};
 const ZONES = [
   ['', 'This device'],
   ['Europe/London', 'London'],
@@ -48,7 +55,7 @@ const HAND_STYLES = [
 const timeZone = { type: 'select', key: 'timezone', label: 'Time zone', options: ZONES };
 const language = { type: 'select', key: 'locale', label: 'Language', options: LOCALES };
 /** The 12 or 24 hour choice, for tiles that show a digital time. `when` says when that time is on screen. */
-const hours = (when) => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when });
+const hours = (when, note = 'Auto follows the language setting.') => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when, note });
 // Analog clocks show no digits, so they skip Hours.
 const time = [timeZone, language];
 // On the clock, language only changes the date ("Fri 23" or "ven. 23"), so it shows only when there is one.
@@ -120,7 +127,9 @@ const TYPES = {
       { type: 'toggle', key: 'still', label: 'Animated sky', invert: true },
       { type: 'toggle', key: 'hide-time', label: 'Clock in the corner', invert: true },
     ],
-    time: [timeZone, hours((a) => !a['hide-time']), language],
+    // Weather words are always English, so Language would change nothing here. The time zone
+    // and Hours only affect the corner clock.
+    time: [{ ...timeZone, when: (a) => !a['hide-time'] }, hours((a) => !a['hide-time'], "Auto follows the viewer's device.")],
   },
   glance: {
     tag: 'bezel-glance',
@@ -314,7 +323,7 @@ function control(c, cfg) {
       const opts = [['', 'Auto', sample(undefined)], ['12', '12-hour', sample(true)], ['24', '24-hour', sample(false)]];
       return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg seg--tall" role="group" aria-labelledby="${id}-l">${opts
         .map(([v, l, ex]) => `<button type="button" data-attr="${c.key}" data-value="${v}" aria-pressed="${String(value) === v}"><span>${l}</span><span class="seg__s">${esc(ex)}</span></button>`)
-        .join('')}</div><p class="hint">Auto follows the language setting.</p></div>`;
+        .join('')}</div><p class="hint">${esc(c.note)}</p></div>`;
     }
     case 'seg':
       return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg" role="group" aria-labelledby="${id}-l"${described}>${c.options
@@ -360,7 +369,7 @@ function visible(list, type) {
 function groupsFor(type) {
   const t = TYPES[type];
   return GROUPS
-    .filter(([g]) => (g !== 'hands' || t.hands) && (g !== 'options' || visible(t.options, type).length))
+    .filter(([g]) => (g !== 'hands' || t.hands) && (g !== 'options' || visible(t.options, type).length) && (g !== 'time' || visible(t.time, type).length))
     .map(([g, l]) => [g, g === 'time' && t.timeLabel ? t.timeLabel : l]);
 }
 
@@ -375,7 +384,7 @@ function groupBody(type, group) {
   const fields = (list) => visible(list, type).map((c) => control(c, cfg)).join('');
 
   if (group === 'style') {
-    const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere.</p></div>`;
+    const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere. Other typefaces load free from Google Fonts, and the code includes the line for it.</p></div>`;
     // Two choices: the black bezel (the library's default "device" frame) or just the screen.
     const framed = (cfg.attrs.frame || (type === 'poster' ? 'none' : 'device')) !== 'none';
     const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Bezel', framed], ['none', 'None', !framed]]
@@ -498,6 +507,11 @@ function renderSnippet() {
   const plain = [];
   lines.push(`<span class="c">&lt;!-- Load once per page --&gt;</span>`);
   plain.push('<!-- Load once per page -->');
+  const font = fontLink(state.tiles[state.current].vars.font);
+  if (font) {
+    lines.push(`<span class="t">&lt;link</span> <span class="a">rel</span>=<span class="v">"stylesheet"</span> <span class="a">href</span>=<span class="v">"${esc(font)}"</span><span class="t">&gt;</span>`);
+    plain.push(`<link rel="stylesheet" href="${font}">`);
+  }
   lines.push(`<span class="t">&lt;script</span> <span class="a">type</span>=<span class="v">"module"</span> <span class="a">src</span>=<span class="v">"${CDN}"</span><span class="t">&gt;&lt;/script&gt;</span>`, '');
   plain.push(`<script type="module" src="${CDN}"></script>`, '');
 
@@ -714,7 +728,7 @@ function bindStudio() {
       const present = t.dataset.invert === '1' ? !on : on;
       cfg.attrs[t.dataset.toggle] = present ? true : '';
       updatePreview();
-      if (['hide-seconds', 'hide-weather'].includes(t.dataset.toggle)) {
+      if (['hide-seconds', 'hide-weather', 'hide-time', 'hide-date'].includes(t.dataset.toggle)) {
         renderPanel();
         panel.querySelector(`[data-toggle="${t.dataset.toggle}"]`)?.focus();
       }
@@ -879,6 +893,25 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ---- Boot ----------------------------------------------------------------
+
+// ---- Footer: the copy for the periwinkle half -----------------------
+
+/**
+ * The footer is split on its diagonal. The real content shows in deep plum on the pink half;
+ * this copy shows in deep indigo on the periwinkle half. Screen readers and keyboards only meet the
+ * real content; the copy's links still work for a mouse or a tap on the periwinkle side.
+ */
+function buildFooterCopy() {
+  const layer = $('.foot__layer');
+  if (!layer || $('.foot__layer--sun')) return;
+  const copy = layer.cloneNode(true);
+  copy.classList.add('foot__layer--sun');
+  copy.setAttribute('aria-hidden', 'true');
+  for (const el of copy.querySelectorAll('a, button, [tabindex]')) el.setAttribute('tabindex', '-1');
+  for (const el of copy.querySelectorAll('[id]')) el.removeAttribute('id');
+  layer.after(copy);
+}
+buildFooterCopy();
 
 await Promise.all(Object.values(TYPES).map((t) => customElements.whenDefined(t.tag)));
 bindShowcase();
