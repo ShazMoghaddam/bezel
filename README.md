@@ -2,6 +2,8 @@
 
 **Clocks, calendars and weather, sharp on every screen.**
 
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ShazMoghaddam/badge.svg)](https://hub.xerj.org/contributors/ShazMoghaddam)
+
 Bezel is a set of free, open-source web components: five tiles drawn entirely in vectors, so they stay crisp from a 120 px widget to a 4K desk display. Design one in the Studio, paste one line of HTML into any site, turn a spare iPad into a desk clock, or put tiles on your Mac desktop.
 
 ![Bezel tiles: a month calendar, a poster calendar, a green numerals clock, an orange relief clock, a weather tile, a glance tile with an agenda, and a dark classic clock with a second time zone](docs/bezel-tiles.png)
