@@ -166,6 +166,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   --studio-h: clamp(500px, calc(100vh - 230px), 680px);
   display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s-4); align-items: stretch; height: var(--studio-h);
 }
+.canvas {
+  position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; container-type: inline-size;
+  border-radius: var(--r-3); overflow: hidden; border: 1px solid var(--line-soft);
+  --canvas-bg: radial-gradient(120% 90% at 50% 0%, #F4F5F7 0%, #DADDE2 100%);
+  background: var(--canvas-bg);
+  transition: background .4s;
+}
+/* Mobile: the preview pins under the menu while the settings scroll beneath it. This block must come
+   after the base .canvas rule above, or its position: relative wins and the preview never sticks. */
 @media (max-width: 960px) {
   .studio__body { grid-template-columns: 1fr; height: auto; align-items: start; }
   .canvas {
@@ -177,13 +186,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .canvas__foot { margin: 0 var(--s-2) var(--s-2) !important; min-height: 40px !important; padding: 4px !important; }
 }
 
-.canvas {
-  position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; container-type: inline-size;
-  border-radius: var(--r-3); overflow: hidden; border: 1px solid var(--line-soft);
-  --canvas-bg: radial-gradient(120% 90% at 50% 0%, #F4F5F7 0%, #DADDE2 100%);
-  background: var(--canvas-bg);
-  transition: background .4s;
-}
 .canvas[data-bg="dark"] { --canvas-bg: radial-gradient(120% 90% at 50% 0%, #22252A 0%, #08090A 100%); }
 /* Light and Dark are fixed backdrops for judging a tile, whatever the page's own theme. */
 .canvas .seg--small { background: rgba(0,0,0,.05); border-color: transparent; }

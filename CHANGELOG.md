@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Site: on phones and small tablets, the Studio preview now stays pinned under the menu while the settings scroll beneath it, instead of sitting over the settings tabs. A CSS rule was in the wrong order.
+
 ## 2.0.0 (2026-10-23)
 
 **Breaking:** `night-theme` and `night-hours` are removed. Tiles now follow the device's dark mode instead; use `dark-theme` in place of `night-theme`. Versions pinned to `@v1.x` are unaffected.
