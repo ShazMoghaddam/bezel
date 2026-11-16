@@ -103,7 +103,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
    (3fr : 4fr). Row two: four equal tiles. Every tile is the real element. */
 .showcase { display: grid; gap: var(--s-6); margin-top: var(--s-7); scroll-margin-top: 80px; }
 .showcase__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-5) clamp(16px, 2.2vw, 28px); align-items: start; }
-.showcase__row--large { grid-template-columns: minmax(0, 3fr) minmax(0, 4fr); }
+.showcase__row--large { grid-template-columns: minmax(0, 3fr) minmax(0, 4fr) minmax(0, 4.5fr); }
 .show {
   all: unset; box-sizing: border-box; display: grid; gap: var(--s-3); min-width: 0; cursor: pointer;
   border-radius: var(--r-3);

@@ -5,14 +5,16 @@
  *   modern     the original design: a thin stem from the hub, then a capsule
  *   lollipop   tapered baton hands, a pivot cap with a dark pin, and a fine
  *              seconds hand that ends in a round dot
+ *   slender    needle-thin tapered hands with a short tail, a small pivot and a
+ *              hairline seconds hand with a round counterweight
  *
  * Each dial keeps drawing its own `modern` hands, so the original look is
- * untouched; this module adds the alternative and the shared parsing.
+ * untouched; this module adds the alternatives and the shared parsing.
  * Colours come from the tile's theme variables: --_hand for the hour and
  * minute hands and pivot, --_accent for the seconds hand.
  */
 
-export const HAND_STYLES = ['modern', 'lollipop'];
+export const HAND_STYLES = ['modern', 'lollipop', 'slender'];
 
 /** The hand design named by a `hands` attribute, or the default. */
 export function handStyle(value) {
@@ -65,10 +67,52 @@ export function lollipopHands({
     <circle class="lp-pin" cx="${cx}" cy="${cy}" r="${f(w(0.62))}" />`;
 }
 
-/** Colours for the lollipop hands. Dials include this in their styles. */
+/**
+ * Markup for the slender hands, drawn pointing at 12 like the lollipop hands.
+ *
+ * The hour and minute hands run a little past the pivot, as on a watch, and the
+ * seconds hand carries a small round counterweight on its tail.
+ */
+export function slenderHands({
+  cx = 50,
+  cy = 50,
+  hour,
+  minute,
+  second,
+  tail = 7,
+  weight = 1,
+  seconds = true,
+  classes = { hour: 'hour', minute: 'minute', second: 'second' },
+  extra = '',
+}) {
+  const w = (n) => n * weight;
+  const secondHand = seconds
+    ? `<g class="${extra} sl-sec ${classes.second}">
+        <line x1="${cx}" y1="${f(cy + tail)}" x2="${cx}" y2="${f(cy - second)}" stroke-width="${f(w(0.26))}" />
+        <circle cx="${cx}" cy="${f(cy + tail - w(0.9))}" r="${f(w(0.85))}" />
+      </g>`
+    : '';
+  return `
+    <g class="${extra} sl ${classes.hour}"><path class="sl-arm" d="${baton(cx, cy + w(2.4), hour + w(2.4), w(0.72), w(0.48))}" /></g>
+    <g class="${extra} sl ${classes.minute}"><path class="sl-arm" d="${baton(cx, cy + w(3.2), minute + w(3.2), w(0.5), w(0.28))}" /></g>
+    ${secondHand}
+    <circle class="sl-hub" cx="${cx}" cy="${cy}" r="${f(w(1.45))}" />
+    <circle class="sl-pin" cx="${cx}" cy="${cy}" r="${f(w(0.52))}" />`;
+}
+
+/** Markup for any hand style except `modern`, which each dial draws itself. */
+export function styledHands(style, options) {
+  return style === 'slender' ? slenderHands(options) : lollipopHands(options);
+}
+
+/** Colours for the lollipop and slender hands. Dials include this in their styles. */
 export const HANDS_CSS = /* css */ `
   .lp-arm, .lp-pivot { fill: var(--_hand); }
   .lp-sec line { stroke: var(--_accent); stroke-linecap: round; }
   .lp-sec circle { fill: var(--_accent); }
   .lp-pin { fill: color-mix(in srgb, var(--_hand), #000 88%); }
+  .sl-arm, .sl-hub { fill: var(--_hand); }
+  .sl-pin { fill: var(--_surface); }
+  .sl-sec line { stroke: var(--_accent); stroke-linecap: round; }
+  .sl-sec circle { fill: var(--_accent); }
 `;

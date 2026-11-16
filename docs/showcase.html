@@ -1,12 +1,12 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Bezel showcase</title>
-<!-- Used to render docs/bezel-tiles.png: python3 scripts/shot.py http://localhost:4173/docs/showcase.html docs/bezel-tiles.png 1600 1050 -->
+<!-- Used to render docs/bezel-tiles.png: python3 scripts/shot.py http://localhost:4173/docs/showcase.html docs/bezel-tiles.png 1600 790 -->
 <style>
-  /* Top row: calendar and poster at the same height (3fr : 4fr). Bottom row: five square tiles. */
+  /* Top row: calendar, poster and dual clock at the same height (3fr : 4fr : 4.5fr). Bottom row: five square tiles. */
   body { margin: 0; padding: 64px; background: radial-gradient(120% 100% at 50% 0%, #F2F3F5, #DADDE2); display: grid; gap: 40px; }
   .row { display: grid; gap: 40px; align-items: start; }
-  .row--top { grid-template-columns: 3fr 4fr; }
+  .row--top { grid-template-columns: 3fr 4fr 4.5fr; }
   .row--tiles { grid-template-columns: repeat(5, 1fr); }
   .row > * { --bezel-size: 100%; width: 100%; --bezel-font: "Geist", sans-serif; }
 </style>
@@ -15,13 +15,14 @@
 <div class="row row--top">
   <bezel-calendar timezone="Europe/London" locale="en-GB"></bezel-calendar>
   <bezel-poster theme="noir" frame="device" timezone="Europe/London" locale="en-GB"></bezel-poster>
+  <bezel-clock variant="dual" hands="slender" timezone="Europe/London" second-timezone="America/New_York" locale="en-GB"></bezel-clock>
 </div>
 <div class="row row--tiles">
   <bezel-clock variant="numerals" theme="sage" timezone="Europe/London"></bezel-clock>
   <bezel-clock variant="relief" theme="ember" timezone="Europe/London"></bezel-clock>
   <bezel-weather id="w" locale="en-GB"></bezel-weather>
-  <bezel-glance theme="orchid" location="New York" id="g" timezone="America/New_York" hour-cycle="12" locale="en-US"></bezel-glance>
-  <bezel-clock variant="classic" theme="midnight" hands="lollipop" timezone="Europe/London" second-timezone="America/New_York"></bezel-clock>
+  <bezel-glance theme="orchid" location="New York" id="g" timezone="America/New_York" hour-cycle="12" locale="en-US" hands="lollipop"></bezel-glance>
+  <bezel-clock variant="classic" theme="midnight" hands="slender" lume="green" timezone="Europe/London" second-timezone="Asia/Tokyo"></bezel-clock>
 </div>
 <script type="module">
   await customElements.whenDefined('bezel-glance');

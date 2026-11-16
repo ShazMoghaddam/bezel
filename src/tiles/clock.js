@@ -1,27 +1,35 @@
-import { BezelElement, define } from '../core/element.js';
+import { BezelElement, define, FRAMES } from '../core/element.js';
 import { handAngles, names, zoned, isValidTimeZone } from '../core/time.js';
 import { esc } from '../core/frame.js';
-import { handStyle, lollipopHands, baton, HANDS_CSS } from '../core/hands.js';
+import { handStyle, styledHands, baton, HANDS_CSS } from '../core/hands.js';
 
 /**
  * <bezel-clock>
  *
  * Attributes
- *   variant          numerals | relief | classic   (default numerals)
+ *   variant          numerals | relief | classic | dual   (default numerals)
  *   numerals         western | roman | persian      (default western)
- *   theme            sage | cobalt | ember | graphite | blush | stone | midnight | porcelain
+ *   theme            sage | cobalt | ember | graphite | blush | stone | midnight | porcelain | onyx
  *   dark-theme       a theme for dark mode (see README)
- *   second-timezone  classic face only: a small second dial for another city, e.g. "America/New_York"
- *   second-label     name shown under that dial (default: the city from the time zone)
+ *   second-timezone  classic: a small second dial for another city, e.g. "America/New_York"
+ *                    dual: the time on the second dial (default UTC)
+ *   second-label     name shown on that dial (default: the city from the time zone)
+ *   home             dual only: left | right, the side that shows local time (default right)
+ *   hide-labels      dual only: hide the city names
+ *   lume             classic and dual: green | blue, glowing numerals
  *   hide-seconds     hide the seconds hand
  *   hide-date        hide the date label
  *   sweep            smooth | tick   (default smooth; tick steps once a second)
- *   hands            modern | lollipop   (default modern)
+ *   hands            modern | lollipop | slender   (default modern)
+ *
+ * The dual face is landscape (3:2) with two overlapping dials: Roman numerals on the
+ * left, Arabic on the right. It defaults to the metal frame.
  */
 
-const VARIANTS = new Set(['numerals', 'relief', 'classic']);
+const VARIANTS = new Set(['numerals', 'relief', 'classic', 'dual']);
 const SCRIPTS = new Set(['western', 'roman', 'persian']);
-const DEFAULT_THEME = { numerals: 'sage', relief: 'blush', classic: 'porcelain' };
+const DEFAULT_THEME = { numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain' };
+const LUME = new Set(['green', 'blue']);
 
 // Clocks traditionally write four as IIII, which balances VIII on the other side of the dial.
 const ROMAN = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
@@ -55,6 +63,15 @@ function cityName(timeZone) {
 
 const C = 50; // dial centre in the 100 x 100 viewBox
 
+/** The time zone the viewer's device is set to. */
+function deviceZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 function hand({ cls, stem, length, width, cx = C, cy = C }) {
   // A thin stem from the hub, then a capsule, like a modern watch hand.
   return `<g class="hand ${cls}">
@@ -63,11 +80,15 @@ function hand({ cls, stem, length, width, cx = C, cy = C }) {
   </g>`;
 }
 
-function secondHand(length, tail) {
+function secondHand(length, tail, cx = C, cy = C, width = 0.55) {
   return `<g class="hand second">
-    <line x1="${C}" y1="${C + tail}" x2="${C}" y2="${C - length}" stroke-width="0.55" />
+    <line x1="${cx}" y1="${cy + tail}" x2="${cx}" y2="${cy - length}" stroke-width="${width}" />
   </g>`;
 }
+
+/** Dual face geometry, in its 150 x 100 viewBox: two dials whose centres match the case's round ends. */
+const DUAL = { left: { x: 50, y: 50 }, right: { x: 100, y: 50 }, r: 39 };
+const DUAL_ROMAN = { 12: 'XII', 10: 'X', 8: 'VIII', 6: 'VI' };
 
 const DEFS = /* svg */ `
 <defs>
@@ -90,6 +111,11 @@ const DEFS = /* svg */ `
       <feMergeNode in="inner" />
     </feMerge>
   </filter>
+  <filter id="lume" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+    <feFlood class="lume-glow" /><feComposite in2="SourceAlpha" operator="in" result="shape" />
+    <feGaussianBlur in="shape" stdDeviation="0.45" result="near" /><feGaussianBlur in="shape" stdDeviation="1.3" />
+    <feMerge><feMergeNode /><feMergeNode in="near" /><feMergeNode in="SourceGraphic" /></feMerge>
+  </filter>
 </defs>`;
 
 /** Placement of the four big numerals on the numerals face, per script. */
@@ -100,17 +126,21 @@ const BIG = {
 };
 
 class BezelClock extends BezelElement {
-  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'hands'];
+  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'hands', 'home', 'hide-labels', 'lume'];
 
+  // `zone` colours the second time zone's hour hand on the dual face.
+  // Dual styles: a landscape case whose round ends share their centres with the two dials.
+  // Lume: numerals that glow, as on a watch dial; best on dark faces.
   static themes = {
-    sage: { surface: '#5C9268', ink: '#0A0C0A', hand: '#FFFFFF', accent: '#E3F4E6' },
-    cobalt: { surface: '#2D4BD2', ink: '#F3F5FF', hand: '#FFFFFF', accent: '#FFD43B' },
-    ember: { surface: '#E25A2C', ink: '#1A0E09', hand: '#FFF6EF', accent: '#FFF6EF' },
-    graphite: { surface: '#121315', ink: '#F2F2F0', hand: '#F2F2F0', accent: '#FF6B35' },
-    blush: { surface: '#E7C8C2', ink: '#5A2A26', hand: '#6E2B27', accent: '#E8409E' },
-    stone: { surface: '#D9DADC', ink: '#2B2D31', hand: '#25272B', accent: '#FF5A1F' },
-    midnight: { surface: '#1B1F27', ink: '#E9E3D6', hand: '#E9E3D6', accent: '#FFB547' },
-    porcelain: { surface: '#F4F4F2', ink: '#17181A', hand: '#17181A', accent: '#FF5A1F' },
+    sage: { surface: '#5C9268', ink: '#0A0C0A', hand: '#FFFFFF', accent: '#E3F4E6', zone: '#0A0C0A' },
+    cobalt: { surface: '#2D4BD2', ink: '#F3F5FF', hand: '#FFFFFF', accent: '#FFD43B', zone: '#FFD43B' },
+    ember: { surface: '#E25A2C', ink: '#1A0E09', hand: '#FFF6EF', accent: '#FFF6EF', zone: '#1A0E09' },
+    graphite: { surface: '#121315', ink: '#F2F2F0', hand: '#F2F2F0', accent: '#FF6B35', zone: '#FF6B35' },
+    blush: { surface: '#E7C8C2', ink: '#5A2A26', hand: '#6E2B27', accent: '#E8409E', zone: '#E8409E' },
+    stone: { surface: '#D9DADC', ink: '#2B2D31', hand: '#25272B', accent: '#FF5A1F', zone: '#2346D8' },
+    midnight: { surface: '#1B1F27', ink: '#E9E3D6', hand: '#E9E3D6', accent: '#FFB547', zone: '#FFB547' },
+    porcelain: { surface: '#F4F4F2', ink: '#17181A', hand: '#17181A', accent: '#FF5A1F', zone: '#2440A8' },
+    onyx: { surface: '#161719', ink: '#ECECEA', hand: '#D3D6DA', accent: '#FF7A45', zone: '#8EA4FF' },
   };
 
   static styles = /* css */ `
@@ -155,6 +185,22 @@ class BezelClock extends BezelElement {
     .sub .city { font-family: var(--_font); font-size: 2.3px; font-weight: 650; letter-spacing: 0.12em; fill: var(--_ink); opacity: .8; }
     .sub .off { font-weight: 550; letter-spacing: 0.04em; opacity: .6; }
 
+    :host([variant="dual"]) { aspect-ratio: var(--bezel-aspect, 3 / 2); --_rim-r: var(--bezel-radius, 33.34cqw);
+      --_bezel-pad: var(--bezel-thickness, 1.13cqw); --_metal-pad: var(--bezel-thickness, 2.3cqw); }
+    :host([variant="dual"]) .frame--none .screen { border-radius: var(--_rim-r); }
+    .v-dual .dot { fill: var(--_ink); }
+    .v-dual .numeral { font-weight: 450; letter-spacing: -0.01em; }
+    .v-dual .roman { letter-spacing: -0.05em; }
+    .v-dual .label { font-family: var(--_font); font-weight: 600; letter-spacing: 0.16em; fill: var(--_ink); fill-opacity: .55; }
+    .v-dual .label .off { font-weight: 500; letter-spacing: 0.06em; fill-opacity: .75; }
+    .zone .z-hour line { stroke: var(--_zone); }
+    .zone .z-hour .lp-arm, .zone .z-hour .sl-arm, .zone .sl-hub, .zone .lp-pivot, .zone .hub { fill: var(--_zone); }
+
+    :host([lume="green"]) { --_glow: var(--bezel-lume, #49F28E); }
+    :host([lume="blue"]) { --_glow: var(--bezel-lume, #4AA6FF); }
+    .lume .numeral { fill: color-mix(in srgb, var(--_ink) 70%, var(--_glow)); filter: url(#lume); }
+    .lume-glow { flood-color: var(--_glow); flood-opacity: .9; }
+
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
   `;
@@ -177,9 +223,35 @@ class BezelClock extends BezelElement {
     return t && BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
   }
 
+  /** The dual face defaults to the metal frame; every other face to the black bezel. */
+  get frame() {
+    const f = this.getAttribute('frame');
+    if (FRAMES.has(f)) return f;
+    return this.variant === 'dual' ? 'metal' : 'device';
+  }
+
   get secondZone() {
     const tz = this.getAttribute('second-timezone');
-    return this.variant === 'classic' && tz && isValidTimeZone(tz) ? tz : null;
+    const valid = tz && isValidTimeZone(tz) ? tz : null;
+    if (this.variant === 'dual') return valid ?? 'UTC';
+    return this.variant === 'classic' ? valid : null;
+  }
+
+  /** Dual face: the side showing local time. */
+  get homeSide() {
+    return this.getAttribute('home') === 'left' ? 'left' : 'right';
+  }
+
+  /** Glowing numerals, on the faces that support them. */
+  get lume() {
+    const l = this.getAttribute('lume');
+    return LUME.has(l) && (this.variant === 'classic' || this.variant === 'dual') ? l : null;
+  }
+
+  #centres() {
+    const home = DUAL[this.homeSide];
+    const away = this.homeSide === 'right' ? DUAL.left : DUAL.right;
+    return { home, away };
   }
 
   get hands() {
@@ -197,6 +269,7 @@ class BezelClock extends BezelElement {
 
   template() {
     const v = this.variant;
+    if (v === 'dual') return this.#dual();
     const script = this.script;
     let dial = '';
 
@@ -268,13 +341,13 @@ class BezelClock extends BezelElement {
 
     const heavy = v === 'classic' ? 2.2 : 3.1;
     const classic = v === 'classic';
-    const hands = this.hands === 'lollipop'
-      ? `<g class="hands">${lollipopHands({
+    const hands = this.hands !== 'modern'
+      ? `<g class="hands">${styledHands(this.hands, {
           hour: classic ? 21 : 26,
           minute: classic ? 33.5 : 39,
           second: classic ? 31.5 : 37,
           tail: classic ? 7 : 8,
-          weight: classic ? 1 : 1.12,
+          weight: (classic ? 1 : 1.12) * (this.hands === 'slender' ? 1.1 : 1),
           seconds: this.showSeconds,
           extra: 'hand',
         })}</g>`
@@ -291,10 +364,72 @@ class BezelClock extends BezelElement {
     const dir = script === 'persian' ? ' direction="ltr"' : '';
     // On the Numerals face the date sits in the corner, as HTML so it can move in when corners get rounder.
     const corner = v === 'numerals' ? '<span class="date corner-date" aria-hidden="true"></span>' : '';
-    return `${corner}<svg class="face v-${v} s-${script}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
+    const lume = this.lume ? ' lume' : '';
+    return `${corner}<svg class="face v-${v} s-${script}${lume}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
+  }
+
+  /** The dual face: two overlapping dials, Roman on the left and Arabic on the right. */
+  #dual() {
+    const { r: R } = DUAL;
+    const { home, away } = this.#centres();
+    const homeSide = this.homeSide;
+    const awaySide = homeSide === 'right' ? 'left' : 'right';
+    const arabic = this.script === 'persian' ? 'persian' : 'western';
+    const n = (v) => Number(v.toFixed(2));
+
+    // A ring of 60 dots, bigger at the hours. The second dial's dots stop under the home dial.
+    const track = (c, under) => Array.from({ length: 60 }, (_, i) => {
+      const a = (i * 6 * Math.PI) / 180;
+      const x = c.x + Math.sin(a) * R;
+      const y = c.y - Math.cos(a) * R;
+      if (under && Math.hypot(x - under.x, y - under.y) < R + 1.6) return '';
+      return `<circle class="dot" cx="${n(x)}" cy="${n(y)}" r="${i % 5 ? 0.36 : 0.62}" />`;
+    }).join('');
+
+    // Numerals only on each dial's outer half, so they never meet in the overlap.
+    const numerals = (c, side) => (side === 'left' ? [12, 10, 8, 6] : [12, 2, 4, 6]).map((h) => {
+      const a = ((h % 12) * 30 * Math.PI) / 180;
+      const roman = side === 'left';
+      const text = roman ? DUAL_ROMAN[h] : numeral(h, arabic);
+      return `<text class="numeral${roman ? ' roman' : ''}" x="${n(c.x + Math.sin(a) * (R - 6.6))}" y="${n(c.y - Math.cos(a) * (R - 6.6))}" font-size="${roman ? 4.6 : 5}" text-anchor="middle" dominant-baseline="central">${text}</text>`;
+    }).join('');
+
+    // City names sit below each pivot. The second zone's moves a little outwards, clear of the home dial.
+    let labels = '';
+    if (!this.flag('hide-labels')) {
+      const label = (c, name, cls, dx) => {
+        const text = name.toLocaleUpperCase(this.locale);
+        const size = Math.min(2.55, (2.55 * 13) / Math.max(13, text.length + 3));
+        return `<text class="label ${cls}" x="${c.x + dx}" y="${c.y + 13}" font-size="${size.toFixed(2)}" text-anchor="middle">${esc(text)}${cls === 'away' ? '<tspan class="off" dx="0.9"></tspan>' : ''}</text>`;
+      };
+      labels = label(home, cityName(this.timeZone ?? deviceZone()), 'home', 0)
+        + label(away, this.getAttribute('second-label') || cityName(this.secondZone), 'away', awaySide === 'left' ? -6 : 6);
+    }
+
+    const style = this.hands;
+    const seconds = this.showSeconds;
+    const set = (c, classes, withSeconds) => {
+      if (style !== 'modern') {
+        return styledHands(style, {
+          cx: c.x, cy: c.y, classes, seconds: withSeconds, extra: 'hand',
+          ...(style === 'slender'
+            ? { hour: R * 0.58, minute: R * 0.9, second: R * 0.95, tail: 7, weight: 0.86 }
+            : { hour: R * 0.55, minute: R * 0.86, second: R * 0.82, tail: 6, weight: 0.72 }),
+        });
+      }
+      return `${hand({ cls: classes.hour, stem: 4.3, length: R * 0.55, width: 1.8, cx: c.x, cy: c.y })}${hand({ cls: classes.minute, stem: 4.3, length: R * 0.86, width: 1.8, cx: c.x, cy: c.y })}${withSeconds ? secondHand(R * 0.95, 6, c.x, c.y, 0.4) : ''}<circle class="hub" cx="${c.x}" cy="${c.y}" r="1.3" /><circle class="hub-pin" cx="${c.x}" cy="${c.y}" r="0.45" />`;
+    };
+
+    const lume = this.lume ? ' lume' : '';
+    const dir = arabic === 'persian' ? ' direction="ltr"' : '';
+    return `<svg class="face v-dual home-${homeSide}${lume}" viewBox="0 0 150 100" aria-hidden="true"${dir}>${DEFS}${track(home)}${track(away, home)}${numerals(home, homeSide)}${numerals(away, awaySide)}${labels}<g class="hands"><g class="zone">${set(away, { hour: 'z-hour', minute: 'z-minute', second: 'z-second' }, false)}</g>${set(home, { hour: 'hour', minute: 'minute', second: 'second' }, seconds)}</g></svg>`;
   }
 
   update(z, first) {
+    if (this.variant === 'dual') {
+      this.#updateDual(z, first);
+      return;
+    }
     const smooth = this.tickRate === 'frame';
     const a = handAngles(z, { smooth });
     this.$('.hour')?.setAttribute('transform', `rotate(${a.hour.toFixed(3)} ${C} ${C})`);
@@ -325,6 +460,25 @@ class BezelClock extends BezelElement {
     }
   }
 
+  #updateDual(z, first) {
+    const smooth = this.tickRate === 'frame';
+    const { home, away } = this.#centres();
+    const turn = (sel, deg, c) => this.$(sel)?.setAttribute('transform', `rotate(${deg.toFixed(3)} ${c.x} ${c.y})`);
+    const a = handAngles(z, { smooth });
+    turn('.hour', a.hour, home);
+    turn('.minute', a.minute, home);
+    turn('.second', a.second, home);
+    const zone = this.secondZone;
+    const b = handAngles(zoned(z.ms, zone), { smooth });
+    turn('.z-hour', b.hour, away);
+    turn('.z-minute', b.minute, away);
+    if (first || z.minutes !== this.#dateMinute) {
+      this.#dateMinute = z.minutes;
+      const off = this.$('.away .off');
+      if (off) off.textContent = zoneOffset(z.ms, this.timeZone, zone);
+    }
+  }
+
   /** Numerals near the minute hand rise to full size; the rest recede into the surface. */
   #relief(minuteAngle) {
     const pos = minuteAngle / 30; // in hours, 0..12
@@ -345,7 +499,8 @@ class BezelClock extends BezelElement {
       new Intl.DateTimeFormat(this.locale, { hour: 'numeric', minute: '2-digit', hour12: this.hour12, timeZone: tz }).format(z.ms);
     const zone = this.secondZone;
     const second = zone ? `, ${fmt(zone)} in ${this.getAttribute('second-label') || cityName(zone)}` : '';
-    return `Clock showing ${fmt(this.timeZone)}${second}`;
+    const home = this.variant === 'dual' ? ` in ${cityName(this.timeZone ?? deviceZone())}` : '';
+    return `Clock showing ${fmt(this.timeZone)}${home}${second}`;
   }
 }
 

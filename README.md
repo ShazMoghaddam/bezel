@@ -2,16 +2,17 @@
 
 **Clocks, calendars and weather, sharp on every screen.**
 
+[![CI](https://github.com/ShazMoghaddam/bezel/actions/workflows/ci.yml/badge.svg)](https://github.com/ShazMoghaddam/bezel/actions/workflows/ci.yml)
 [![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ShazMoghaddam/badge.svg)](https://hub.xerj.org/contributors/ShazMoghaddam)
 
 Bezel is a set of free, open-source web components: five tiles drawn entirely in vectors, so they stay crisp from a 120 px widget to a 4K desk display. Design one in the Studio, paste one line of HTML into any site, turn a spare iPad into a desk clock, or put tiles on your Mac desktop.
 
-![Bezel tiles: a month calendar, a poster calendar, a green numerals clock, an orange relief clock, a weather tile, a glance tile with an agenda, and a dark classic clock with a second time zone](docs/bezel-tiles.png)
+![Bezel tiles: a month calendar, a poster calendar and a dual time zone clock in a brushed metal case, then a green numerals clock, an orange relief clock, a weather tile, a glance tile with an agenda, and a dark classic clock with glowing numerals](docs/bezel-tiles.png)
 
 **[Open the Studio](https://shazmoghaddam.github.io/bezel/site/)** to design a tile and copy its code.
 
 - **Sharp at any size.** Every face is SVG and CSS sized in container units.
-- **Yours to style.** Any colour, a light and a dark colour set, three typefaces ready to go, rounder or squarer corners, with or without the bezel.
+- **Yours to style.** Any colour, a light and a dark colour set, three hand designs, three typefaces ready to go, rounder or squarer corners, and a black bezel, a brushed metal case or no frame at all.
 - **Live data, no keys.** Weather and air quality from [Open-Meteo](https://open-meteo.com), free and keyless. Agendas from standard `.ics` calendar feeds.
 - **Speaks your language.** Dates, times and weather words in English, French, German, Spanish, Italian, Japanese and Persian.
 - **Light.** About 25 kB gzipped with no dependencies and no build step. Every tile on a page shares one timer and pauses when off screen.
@@ -36,7 +37,7 @@ Bezel is a set of free, open-source web components: five tiles drawn entirely in
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.0.0/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.0/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief" theme="ember"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>
@@ -77,21 +78,35 @@ The Studio only offers settings that have a visible effect on the tile you're ed
 
 ### `<bezel-clock>`
 
-An analog clock with three faces: **Numerals**, with four huge overlapping numbers behind the hands; **Relief**, with numerals pressed into the surface that rise as the minute hand passes; and **Classic**, a clean railway dial.
+An analog clock with four faces: **Numerals**, with four huge overlapping numbers behind the hands; **Relief**, with numerals pressed into the surface that rise as the minute hand passes; **Classic**, a clean railway dial; and **Dual**, two overlapping dials for two time zones in one landscape case.
 
 | Attribute         | Values                                         | Default            |
 | ----------------- | ---------------------------------------------- | ------------------ |
-| `variant`         | `numerals`, `relief`, `classic`                | `numerals`         |
+| `variant`         | `numerals`, `relief`, `classic`, `dual`        | `numerals`         |
 | `numerals`        | `western`, `roman`, `persian`                  | `western`          |
-| `hands`           | `modern`, `lollipop`                           | `modern`           |
-| `theme`           | `sage`, `cobalt`, `ember`, `graphite`, `blush`, `stone`, `midnight`, `porcelain` | depends on the face |
+| `hands`           | `modern`, `lollipop`, `slender`                | `modern`           |
+| `theme`           | `sage`, `cobalt`, `ember`, `graphite`, `blush`, `stone`, `midnight`, `porcelain`, `onyx` | depends on the face |
 | `sweep`           | `smooth`, `tick`                               | `smooth`           |
 | `hide-seconds`    | boolean                                        | off                |
 | `hide-date`       | boolean                                        | off                |
-| `second-timezone` | Classic face only: another city, e.g. `Asia/Tokyo` |                |
-| `second-label`    | name under the second dial                     | the city's name    |
+| `second-timezone` | Classic and Dual: another city, e.g. `Asia/Tokyo` | Dual: `UTC`     |
+| `second-label`    | name on the second dial                        | the city's name    |
+| `lume`            | Classic and Dual: `green`, `blue`              | off                |
+| `home`            | Dual only: `left`, `right`                     | `right`            |
+| `hide-labels`     | Dual only: boolean, hides the city names       | off                |
 
-`hands="lollipop"` swaps the slim original hands for tapered batons, a pivot cap and a seconds hand that ends in a round dot. A second time zone replaces the 6 with a small dial showing the city and the time difference, for example "NEW YORK −5h". Roman numerals write four as IIII, as most clock dials do.
+**Hands.** `modern` is the slim original. `lollipop` has tapered batons, a pivot cap and a seconds hand that ends in a round dot. `slender` has fine needles that run just past the pivot, and a hairline seconds hand with a small round counterweight. All three work on every dial, including the one on `<bezel-glance>`.
+
+**Second time zone.** On the Classic face, a second time zone replaces the 6 with a small dial showing the city and the time difference, for example "NEW YORK −5h". Roman numerals write four as IIII, as most clock dials do.
+
+**Dual.** A 3:2 tile with round ends and two dials that overlap in the middle: Roman numerals on the left, Arabic on the right (`numerals="persian"` switches the right dial to Persian digits). One dial shows local time and is drawn in full; the other shows `second-timezone`, or UTC if you don't set one, and its dots stop where it tucks behind the first. `home` picks which side is local. Each dial carries a small city name, with the time difference on the second, and only the local dial has a seconds hand. The second zone's hour hand takes its own colour, `--bezel-zone`. Dual starts in the `porcelain` theme and the `metal` frame; `theme="onyx"` is its dark partner.
+
+```html
+<bezel-clock variant="dual" second-timezone="America/New_York"></bezel-clock>
+<bezel-clock variant="dual" theme="onyx" hands="slender" lume="blue" home="left" second-timezone="Asia/Tokyo"></bezel-clock>
+```
+
+**Glowing numerals.** `lume="green"` or `lume="blue"` makes the numerals glow, like a watch dial at night: green-white like vintage lume, or a cooler blue. Only the numerals glow; the dots, ticks and hands stay as they are. It shows best on dark colours such as `onyx` or `midnight`. Set `--bezel-lume` to any colour for a glow of your own.
 
 ### `<bezel-calendar>`
 
@@ -153,7 +168,7 @@ Pin a month and it makes a good print or poster at any resolution.
 
 | Attribute    | Values                                        | Default                     |
 | ------------ | --------------------------------------------- | --------------------------- |
-| `frame`      | `device`, `bezel`, `none`                     | `device` (`none` on poster) |
+| `frame`      | `device`, `bezel`, `metal`, `none`            | `device` (`none` on poster, `metal` on the dual clock) |
 | `theme`      | one of the tile's themes                      | the tile's default          |
 | `dark-theme` | a theme to use in dark mode                   | none                        |
 | `appearance` | `light` or `dark` to fix one look; leave it out to follow the device | follows the device |
@@ -161,7 +176,7 @@ Pin a month and it makes a good print or poster at any resolution.
 | `locale`     | a language tag, e.g. `fr-FR`                  | the viewer's browser        |
 | `hour-cycle` | `12`, `24`                                    | from `locale`               |
 
-`device` is a thin black bezel of even width with a camera dot and a soft shadow; `bezel` is the black border alone; `none` is just the screen, for when the tile sits inside your own design. The frame is also exposed as CSS parts: `::part(frame)`, `::part(bezel)` and `::part(screen)`.
+`device` is a thin black bezel of even width with a camera dot and a soft shadow; `bezel` is the black border alone; `metal` is a brushed silver case lit from above, with the face set slightly into it; `none` is just the screen, for when the tile sits inside your own design. The frame is also exposed as CSS parts: `::part(frame)`, `::part(bezel)` and `::part(screen)`.
 
 ## Colours and dark mode
 
@@ -191,12 +206,14 @@ In dark mode each colour comes from `--bezel-dark-*` first, then the `dark-theme
 | `--bezel-size`                   | width of the tile (the height follows)               |
 | `--bezel-aspect`                 | aspect ratio, e.g. `16 / 9`                          |
 | `--bezel-radius`                 | corner radius in `cqw` (`22cqw` default); content moves in as corners get rounder |
-| `--bezel-thickness`              | width of the black bezel (`1.7cqw` default)          |
+| `--bezel-thickness`              | width of the black bezel (`1.7cqw` default) or the metal rim (`2.1cqw`) |
 | `--bezel-font`                   | typeface for every tile                              |
 | `--bezel-surface`                | screen background                                    |
 | `--bezel-ink`                    | text and numerals                                    |
 | `--bezel-accent`                 | highlights, the seconds hand, today                  |
 | `--bezel-hand`                   | clock hands, on the clock and the glance dial        |
+| `--bezel-zone`                   | dual clock: the second time zone's hour hand         |
+| `--bezel-lume`                   | the glow colour for `lume`                           |
 | `--bezel-today`, `--bezel-muted` | calendar: today's circle and other months' days      |
 | `--bezel-soft`                   | glance: the clock plate                              |
 | `--bezel-rule`                   | poster: the column rules                             |
@@ -310,3 +327,8 @@ Weather data by [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Typefaces Geis
 ## Licence
 
 [MIT](LICENSE)
+
+---
+
+Created by **Shaz Moghaddam** · London
+[Website](https://shazmoghaddam.github.io/) · [LinkedIn](https://www.linkedin.com/in/shazmoghaddam/)

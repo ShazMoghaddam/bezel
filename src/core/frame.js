@@ -1,9 +1,12 @@
 /**
- * Shared styles for every tile: sizing, the three frame styles and the type stack.
+ * Shared styles for every tile: sizing, the four frame styles and the type stack.
  *
  * Geometry is in container units, so a tile is equally crisp at 120px or 2400px.
  * The host is the size container for the frame; the screen is the container for
  * tile content, so content scales with the visible screen, not the outer rim.
+ *
+ * Metal is a brushed silver rim lit from above, a thin bevelled lip (both shares of the
+ * tile's width) and a face set slightly into the case. It stays silver in dark mode.
  *
  * Radii are concentric: each inner radius is the outer radius minus the padding
  * between them, which is what makes hardware corners look right.
@@ -15,6 +18,8 @@ export const FRAME_CSS = /* css */ `
   /* No metal rim: the black bezel is the outermost layer, so nothing light shows around it. */
   --_rim-pad: 0px;
   --_bezel-pad: var(--bezel-thickness, 1.7cqw);
+  --_metal-pad: var(--bezel-thickness, 2.1cqw);
+  --_lip: calc(var(--_metal-pad) * 0.22);
   /* Extra inset for content when corners are rounder than the 22cqw the layouts were drawn for,
      so text near a corner never runs into the curve. Zero at the default radius and below. */
   --_safe: max(0cqw, calc((var(--_rim-r) - 22cqw) * 0.36));
@@ -79,13 +84,15 @@ export const FRAME_CSS = /* css */ `
   color: var(--_ink);
   isolation: isolate;
 }
-.frame--device .screen::after {
+.frame--device .screen::after, .frame--metal .screen::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
   z-index: 50;
+}
+.frame--device .screen::after {
   background: linear-gradient(155deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 34%);
   box-shadow: inset 0 0 0 0.15cqw rgba(0,0,0,.2);
 }
@@ -96,6 +103,13 @@ export const FRAME_CSS = /* css */ `
   box-shadow: 0 1.2cqw 3cqw -1cqw rgba(0,0,0,.35);
 }
 .frame--bezel .screen { border-radius: calc(var(--_rim-r) - var(--_bezel-pad)); }
+
+.frame--metal { border-radius: var(--_rim-r); padding: var(--_metal-pad);
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,.025) 1px 2px), linear-gradient(#F7F7F8, #DADCDF 22%, #C3C6CA 55%, #A9ADB3);
+  box-shadow: inset 0 .25cqw .2cqw rgba(255,255,255,.9), inset 0 -.3cqw .4cqw rgba(0,0,0,.18), 0 .4cqw .6cqw rgba(0,0,0,.1), 0 3cqw 5cqw -1.5cqw rgba(0,0,0,.28); }
+.frame--metal .bezel { border-radius: calc(var(--_rim-r) - var(--_metal-pad)); padding: var(--_lip); background: linear-gradient(#9EA2A8, #D9DBDE 60%, #EEEFF0); }
+.frame--metal .screen { border-radius: calc(var(--_rim-r) - var(--_metal-pad) - var(--_lip)); }
+.frame--metal .screen::after { box-shadow: inset 0 .9cqw 1.4cqw -.4cqw rgba(0,0,0,.28), inset 0 0 0 .12cqw rgba(0,0,0,.12); }
 
 /* None: just the screen, for embedding inside your own UI. */
 .frame--none .bezel { padding: 0; background: none; box-shadow: none; border-radius: var(--_rim-r); }

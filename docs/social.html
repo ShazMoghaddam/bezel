@@ -19,6 +19,7 @@
   .sub { font: 500 20px/1.4 "Geist Mono", monospace; color: #4A5059; letter-spacing: .01em; }
   .tiles { position: absolute; right: 64px; top: 50%; translate: 0 -50%; display: grid; grid-template-columns: 220px 220px; gap: 24px; }
   .tiles > * { --bezel-size: 220px; --bezel-font: "Geist", sans-serif; }
+  .tiles > .wide { grid-column: 1 / -1; --bezel-size: 464px; }
 </style>
 <script type="module" src="../src/index.js"></script>
 
@@ -29,10 +30,9 @@
   <div class="sub">Free, open-source web components</div>
 </div>
 <div class="tiles">
-  <bezel-clock variant="relief" theme="ember" timezone="Europe/London"></bezel-clock>
+  <bezel-clock class="wide" variant="dual" theme="onyx" hands="slender" lume="blue" timezone="Europe/London" second-timezone="America/New_York" locale="en-GB"></bezel-clock>
   <bezel-weather id="w" locale="en-GB" still></bezel-weather>
   <bezel-calendar timezone="Europe/London" locale="en-GB" hide-time></bezel-calendar>
-  <bezel-clock variant="classic" theme="midnight" hands="lollipop" timezone="Europe/London" second-timezone="America/New_York"></bezel-clock>
 </div>
 <script type="module">
   await customElements.whenDefined('bezel-weather');
