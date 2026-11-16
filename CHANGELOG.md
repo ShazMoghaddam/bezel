@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Housekeeping: the bundle's gzip size budget rises from 27 kB to 28 kB. 2.1.0 landed just under the old limit, so this leaves room for small fixes without CI failing. The README now gives the current size, about 27 kB.
+
 ## 2.1.0 (2026-11-16)
 
 - **Dual clock:** `<bezel-clock variant="dual">`, a 3:2 tile with round ends and two overlapping dials, Roman on the left and Arabic on the right. One dial shows local time; the other shows `second-timezone`, or UTC if none is set. `home="left|right"` picks the local side (right by default); that dial is drawn in full and the other's dots stop where it tucks behind. Small city names sit inside each dial, with the time difference on the second; `hide-labels` turns them off. Only the local dial has a seconds hand, and `hide-seconds` works as on every clock. Screen readers hear both times.
