@@ -1,7 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 (2026-11-16)
 
+- **Dual clock:** `<bezel-clock variant="dual">`, a 3:2 tile with round ends and two overlapping dials, Roman on the left and Arabic on the right. One dial shows local time; the other shows `second-timezone`, or UTC if none is set. `home="left|right"` picks the local side (right by default); that dial is drawn in full and the other's dots stop where it tucks behind. Small city names sit inside each dial, with the time difference on the second; `hide-labels` turns them off. Only the local dial has a seconds hand, and `hide-seconds` works as on every clock. Screen readers hear both times.
+- **Metal frame:** `frame="metal"`, a brushed silver case lit from above with the face set slightly into it. It works on every tile and is the dual clock's default.
+- **Slender hands:** `hands="slender"`, fine needles that run just past the pivot and a hairline seconds hand with a round counterweight. Works on every dial, including `<bezel-glance>`.
+- **Glowing numerals:** `lume="green|blue"` on the Classic and Dual faces. Only the numerals glow. `--bezel-lume` sets a glow colour of your own.
+- **Colours:** a new dark `onyx` clock theme, and `--bezel-zone` for the second time zone's hour hand (deep blue on `porcelain`, soft blue on `onyx`).
+- Studio: a Dual face with Local time on, City names and Second time zone (UTC by default); Glowing numerals on Classic and Dual; a Metal frame; Slender hands; and a Second zone hand colour. Choosing Dual switches to its own palette and the metal frame unless you've already picked them.
+- Site: the dual clock joins the hero, the classic example now shows slender hands and green lume, and the desk display page sizes the dual clock to fill the screen.
+- README: a CI badge, sections for the new face, frame, hands and lume, and a refreshed showcase image and social preview.
 - Site: on phones and small tablets, the Studio preview now stays pinned under the menu while the settings scroll beneath it, instead of sitting over the settings tabs. A CSS rule was in the wrong order.
 
 ## 2.0.0 (2026-10-23)

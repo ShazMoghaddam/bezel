@@ -1,7 +1,7 @@
 // Bezel demo site: showcase, studio, code cards and desk mode.
 // The tiles themselves come from the library; this file only drives the page.
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.0.0/dist/bezel.min.js';
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 // [CSS value, label, Google Fonts family spec]. The copied code includes the line that loads the chosen face.
@@ -44,7 +44,7 @@ const LOCALES = [
   ['fa-IR', 'فارسی'],
 ];
 
-const COLOR_LABELS = { surface: 'Background', ink: 'Text', accent: 'Accent', hand: 'Hands', today: 'Today', muted: 'Other months', soft: 'Dial plate', rule: 'Rules', tint: 'Sky tint' };
+const COLOR_LABELS = { surface: 'Background', ink: 'Text', accent: 'Accent', hand: 'Hands', zone: 'Second zone hand', today: 'Today', muted: 'Other months', soft: 'Dial plate', rule: 'Rules', tint: 'Sky tint' };
 const COLOR_KEYS = Object.keys(COLOR_LABELS);
 // Every colour has a dark mode twin, set as --bezel-dark-<name> and stored as vars['dark-<name>'].
 const VAR_KEYS = [...COLOR_KEYS, ...COLOR_KEYS.map((k) => `dark-${k}`), 'radius', 'font'];
@@ -52,7 +52,14 @@ const VAR_KEYS = [...COLOR_KEYS, ...COLOR_KEYS.map((k) => `dark-${k}`), 'radius'
 const HAND_STYLES = [
   ['modern', 'Modern', 'The original slim hands'],
   ['lollipop', 'Lollipop', 'Batons with a round seconds tip'],
+  ['slender', 'Slender', 'Fine needles with a counterweight'],
 ];
+
+/** Each clock face's own palette, used until the user picks colours. */
+const CLOCK_DEFAULTS = { numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain' };
+/** The frame a tile has when no frame is set: none on the poster, metal on the dual clock, the black bezel elsewhere. */
+const defaultFrame = (type, attrs = {}) => (type === 'poster' ? 'none' : type === 'clock' && attrs.variant === 'dual' ? 'metal' : 'device');
+const isDual = (type, attrs) => type === 'clock' && attrs.variant === 'dual';
 
 const timeZone = { type: 'select', key: 'timezone', label: 'Time zone', options: ZONES };
 const language = { type: 'select', key: 'locale', label: 'Language', options: LOCALES };
@@ -60,7 +67,7 @@ const language = { type: 'select', key: 'locale', label: 'Language', options: LO
 const hours = (when, note = 'Auto follows the language setting.') => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when, note });
 // Analog clocks show no digits, so they skip Hours.
 // On the clock, language only changes the date ("Fri 23" or "ven. 23"), so it shows only when there is one.
-const clockTime = [timeZone, { ...language, when: (a) => a.variant !== 'relief' && !a['hide-date'] }];
+const clockTime = [timeZone, { ...language, when: (a) => a.variant !== 'relief' && a.variant !== 'dual' && !a['hide-date'] }];
 const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
 const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']], hint: 'Auto follows the language setting: °F in the US, °C elsewhere.' };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
@@ -87,8 +94,10 @@ const TYPES = {
     colorLabels: { accent: 'Seconds hand' },
     colorHint: 'The seconds hand colour also tints the date on the Classic face.',
     style: [
-      { type: 'seg', key: 'variant', label: 'Face', options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic']] },
-      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']] },
+      { type: 'seg', key: 'variant', label: 'Face', options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic'], ['dual', 'Dual']] },
+      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']], when: (a) => a.variant !== 'dual' },
+      { type: 'seg', key: 'numerals', label: 'Right dial numbers', options: [['', '1 2 3'], ['persian', '۱ ۲ ۳']], hint: 'The left dial always uses Roman numerals.', when: (a) => a.variant === 'dual' },
+      { type: 'seg', key: 'lume', label: 'Glowing numerals', options: [['', 'Off'], ['green', 'Green'], ['blue', 'Blue']], hint: 'Like a watch dial at night. The glow shows best on dark colours.', when: (a) => a.variant === 'classic' || a.variant === 'dual' },
     ],
     hands: true,
     handControls: [
@@ -97,8 +106,11 @@ const TYPES = {
     ],
     options: [
       // The Relief face has no date, and only the Classic face has room for a second dial.
-      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' },
+      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' && a.variant !== 'dual' },
       { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'None'], ...ZONES.slice(1)], hint: 'A small dial for another city, in place of the 6.', when: (a) => a.variant === 'classic' },
+      { type: 'select', key: 'second-timezone', label: 'Second time zone', options: [['', 'UTC'], ...ZONES.slice(1)], hint: 'The time on the second dial.', when: (a) => a.variant === 'dual' },
+      { type: 'seg', key: 'home', label: 'Local time on', options: [['', 'Right dial'], ['left', 'Left dial']], hint: 'The home dial is drawn in full; the other tucks behind it.', when: (a) => a.variant === 'dual' },
+      { type: 'toggle', key: 'hide-labels', label: 'City names', invert: true, when: (a) => a.variant === 'dual' },
     ],
     time: clockTime,
   },
@@ -190,7 +202,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 function freshState() {
   const s = { current: 'clock', bg: 'desk', tiles: {} };
   for (const [k, t] of Object.entries(TYPES)) {
-    s.tiles[k] = { attrs: { frame: k === 'poster' ? 'none' : 'device', ...t.attrs }, vars: {}, size: t.size };
+    s.tiles[k] = { attrs: { frame: defaultFrame(k, t.attrs), ...t.attrs }, vars: {}, size: t.size };
   }
   return s;
 }
@@ -300,7 +312,7 @@ function openExample(button) {
   const attrs = {};
   for (const a of tile.attributes) if (!SKIP_ATTRS.has(a.name)) attrs[a.name] = a.value === '' ? true : a.value;
   state.current = type;
-  state.tiles[type] = { attrs: { frame: type === 'poster' ? 'none' : 'device', ...attrs }, vars: {}, size: TYPES[type].size };
+  state.tiles[type] = { attrs: { frame: defaultFrame(type, attrs), ...attrs }, vars: {}, size: TYPES[type].size };
   renderStudio(true);
   $('#studio').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   note(`${button.querySelector('.show__label b').textContent} example loaded. Every change below shows in the preview straight away.`);
@@ -333,7 +345,7 @@ function effectiveThemeName(type, cfg) {
   const themes = themesFor(type);
   const name = cfg.attrs.theme;
   if (name && themes[name]) return name;
-  if (type === 'clock') return { numerals: 'sage', relief: 'blush', classic: 'porcelain' }[cfg.attrs.variant || 'numerals'];
+  if (type === 'clock') return CLOCK_DEFAULTS[cfg.attrs.variant || 'numerals'];
   return customElements.get(TYPES[type].tag)?.defaultTheme ?? '';
 }
 
@@ -353,7 +365,8 @@ function colorValue(type, cfg, key, mode = 'light') {
 const editingMode = (cfg) => (cfg.attrs['dark-theme'] && state.editing === 'dark' ? 'dark' : 'light');
 
 function colorKeys(type) {
-  return TYPES[type].colors;
+  // The dual face adds a colour for the second time zone's hour hand.
+  return isDual(type, state.tiles[type].attrs) ? [...TYPES[type].colors, 'zone'] : TYPES[type].colors;
 }
 
 function control(c, cfg) {
@@ -441,14 +454,15 @@ function groupBody(type, group) {
 
   if (group === 'style') {
     const font = `<div class="field"><label for="c-font">Typeface</label><select id="c-font" data-font aria-describedby="c-font-h">${FONTS.map(([v, l]) => `<option value="${esc(v)}" ${cfg.vars.font === v || (!cfg.vars.font && !v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><p class="hint" id="c-font-h">Default uses SF Pro on Apple devices and Geist elsewhere. Other typefaces load free from Google Fonts, and the code includes the line for it.</p></div>`;
-    // Two choices: the black bezel (the library's default "device" frame) or just the screen.
-    const framed = (cfg.attrs.frame || (type === 'poster' ? 'none' : 'device')) !== 'none';
-    const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Bezel', framed], ['none', 'None', !framed]]
-      .map(([v, l, on]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${on}">${l}</button>`)
+    // Three choices: the black bezel (the library's "device" frame), brushed metal, or just the screen.
+    const current = cfg.attrs.frame === 'bezel' ? 'device' : cfg.attrs.frame || defaultFrame(type, cfg.attrs);
+    const frame = `<div class="field"><span class="field__l" id="frame-l">Frame</span><div class="seg" role="group" aria-labelledby="frame-l">${[['device', 'Bezel'], ['metal', 'Metal'], ['none', 'None']]
+      .map(([v, l]) => `<button type="button" data-attr="frame" data-value="${v}" aria-pressed="${current === v}">${l}</button>`)
       .join('')}</div></div>`;
     const size = `<div class="field"><label class="field__l" for="c-size">Size <output data-out="size">${cfg.size} px</output></label><input type="range" id="c-size" min="180" max="${type === 'poster' ? 760 : 560}" step="10" value="${cfg.size}" data-size></div>`;
     const radius = Math.min(30, cfg.vars.radius ?? 22);
-    const corners = t.corners === false ? '' : `<div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="30" step="1" value="${radius}" data-radius></div>`;
+    // The dual clock's round ends are part of its design, so it has no corners setting.
+    const corners = t.corners === false || isDual(type, cfg.attrs) ? '' : `<div class="field"><label class="field__l" for="c-radius">Corners <output data-out="radius">${radius}</output></label><input type="range" id="c-radius" min="1" max="30" step="1" value="${radius}" data-radius></div>`;
     return fields(t.style) + frame + `<div class="row2${corners ? '' : ' row2--one'}">${size}${corners}</div>` + font;
   }
 
@@ -548,7 +562,8 @@ function updatePreview(rebuild) {
   // The preview shows whichever colour set is being edited; the real tile follows the device.
   if (cfg.attrs['dark-theme']) preview.setAttribute('appearance', editingMode(cfg));
   else preview.removeAttribute('appearance');
-  $('[data-size-label]').textContent = `${cfg.size} px${type === 'poster' ? ` × ${Math.round((cfg.size * 3) / 4)} px` : ''}`;
+  const tall = type === 'poster' ? 3 / 4 : isDual(type, cfg.attrs) ? 2 / 3 : 0;
+  $('[data-size-label]').textContent = `${cfg.size} px${tall ? ` × ${Math.round(cfg.size * tall)} px` : ''}`;
   renderSnippet();
   save();
 }
@@ -558,7 +573,7 @@ function snippetParts() {
   const t = TYPES[type];
   const cfg = state.tiles[type];
   const attrs = { ...cfg.attrs };
-  if (attrs.frame === (type === 'poster' ? 'none' : 'device')) delete attrs.frame;
+  if (attrs.frame === defaultFrame(type, attrs)) delete attrs.frame;
   if (attrs.hands === 'modern') delete attrs.hands;
   const vars = {};
   for (const k of VAR_KEYS) if (k !== 'radius' && k !== 'font' && cfg.vars[k]) vars[k] = cfg.vars[k];
@@ -692,11 +707,25 @@ function bindStudio() {
       const key = seg.dataset.attr;
       const value = seg.dataset.value;
       if (key === 'variant' && state.current === 'clock') {
+        const from = cfg.attrs.variant || 'numerals';
         // Follow the new face's own palette unless the user picked one deliberately.
-        const defaults = { numerals: 'sage', relief: 'blush', classic: 'porcelain' };
-        if (!cfg.attrs.theme || cfg.attrs.theme === defaults[cfg.attrs.variant || 'numerals']) cfg.attrs.theme = defaults[value];
-        // Only the Classic face draws the second dial, so don't carry the setting into code where it does nothing.
-        if (value !== 'classic') delete cfg.attrs['second-timezone'];
+        if (!cfg.attrs.theme || cfg.attrs.theme === CLOCK_DEFAULTS[from]) cfg.attrs.theme = CLOCK_DEFAULTS[value];
+        // Likewise the frame: the dual face comes in metal, the others in the black bezel.
+        if (!cfg.attrs.frame || cfg.attrs.frame === defaultFrame('clock', { variant: from })) cfg.attrs.frame = defaultFrame('clock', { variant: value });
+        // Drop settings the new face doesn't use, so they don't end up in code where they do nothing.
+        if (value !== 'classic' && value !== 'dual') {
+          delete cfg.attrs['second-timezone'];
+          delete cfg.attrs.lume;
+        }
+        if (value !== 'dual') {
+          delete cfg.attrs.home;
+          delete cfg.attrs['hide-labels'];
+          delete cfg.vars.zone;
+          delete cfg.vars['dark-zone'];
+        } else {
+          if (cfg.attrs.numerals === 'roman') delete cfg.attrs.numerals;
+          delete cfg.vars.radius; // the dual face keeps its round ends
+        }
       }
       cfg.attrs[key] = value;
       renderPanel();

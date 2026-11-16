@@ -4,7 +4,7 @@ import { esc } from '../core/frame.js';
 import { icons, skyIcon } from '../core/icons.js';
 import { parseICS, expandEvents, normaliseEvents } from '../core/ics.js';
 import { WeatherSource, WEATHER_ATTRIBUTES } from '../core/weather-source.js';
-import { handStyle, lollipopHands, HANDS_CSS } from '../core/hands.js';
+import { handStyle, styledHands, HANDS_CSS } from '../core/hands.js';
 import { tr, condition, highLow } from '../core/i18n.js';
 
 /**
@@ -16,7 +16,7 @@ import { tr, condition, highLow } from '../core/i18n.js';
  *   ics           URL of an .ics feed (the server must allow cross-origin requests)
  *   max-events    events to show (default 3)
  *   hide-weather  replace the weather corner with the week number
- *   hands         modern | lollipop   (default modern)
+ *   hands         modern | lollipop | slender   (default modern)
  *   location, latitude, longitude, units, refresh   (see <bezel-weather>)
  *
  * Properties
@@ -42,8 +42,8 @@ function miniDial(style) {
   return `<svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
     <circle class="plate" cx="50" cy="50" r="48"/>
     ${ticks}${nums}
-    ${style === 'lollipop'
-      ? lollipopHands({ hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: 'hr', minute: 'mn', second: 'sc' } })
+    ${style !== 'modern'
+      ? styledHands(style, { hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: 'hr', minute: 'mn', second: 'sc' } })
       : `<g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
     <g class="h mn"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="13"/></g>
     <g class="h sc"><line x1="50" y1="58" x2="50" y2="8"/></g>
@@ -78,8 +78,10 @@ class BezelGlance extends BezelElement {
     .dial .h line.w { stroke-width: 3.6; }
     .dial .sc line { stroke: var(--_accent); stroke-width: .9; }
     .dial .hub { fill: var(--_hand); } .dial .pin { fill: var(--_accent); }
-    .dial .h, .dial .lp, .dial .lp-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    .dial .h, .dial .lp, .dial .lp-sec, .dial .sl, .dial .sl-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
     ${HANDS_CSS}
+    .dial .sl-sec line { stroke-width: .42; }
+    .dial .sl-pin { fill: var(--_soft); }
 
     .agenda { display: grid; align-content: end; gap: 2.2cqw; min-inline-size: 0; }
     .ev { display: grid; gap: .2cqw; padding-inline-start: 2.6cqw; border-inline-start: 0.9cqw solid var(--_accent); min-inline-size: 0; }

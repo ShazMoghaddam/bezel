@@ -38,7 +38,7 @@ test('all five elements are defined', () => {
 });
 
 test('clock renders each variant and labels itself', async () => {
-  for (const variant of ['numerals', 'relief', 'classic']) {
+  for (const variant of ['numerals', 'relief', 'classic', 'dual']) {
     const el = mount(`<bezel-clock variant="${variant}" timezone="Europe/London" locale="en-GB"></bezel-clock>`);
     await flush();
     const svg = el.shadowRoot.querySelector('svg.face');
@@ -278,4 +278,106 @@ test('weather and glance words follow the language', async () => {
   assert.match(g.shadowRoot.querySelector('.year').textContent, /Woche \d+/);
   assert.match(g.shadowRoot.querySelector('.year').textContent, /Tag \d+ von 36[56]/);
   g.remove();
+});
+
+test('dual clock: two dials, local time at home and the second zone (UTC by default) on the other', async () => {
+  const el = mount('<bezel-clock variant="dual" timezone="Europe/London" locale="en-GB"></bezel-clock>');
+  await flush();
+  const root = el.shadowRoot;
+  const svg = root.querySelector('svg.face.v-dual');
+  assert.ok(svg);
+  assert.equal(svg.getAttribute('viewBox'), '0 0 150 100');
+  // Defaults: home on the right, the metal frame, porcelain colours.
+  assert.ok(svg.getAttribute('class').includes('home-right'));
+  assert.ok(root.querySelector('.frame--metal'));
+  assert.equal(el.themeName, 'porcelain');
+  // The home dial turns around the right-hand centre; the second zone's hands around the left.
+  assert.match(root.querySelector('.hour').getAttribute('transform'), / 100 50\)$/);
+  assert.match(root.querySelector('.z-hour').getAttribute('transform'), / 50 50\)$/);
+  assert.equal(root.querySelector('.z-second'), null, 'only the home dial has a seconds hand');
+  // Roman on the left, Arabic on the right, four numerals each.
+  const nums = [...root.querySelectorAll('.numeral')].map((n) => n.textContent);
+  assert.deepEqual(nums.sort(), ['12', '2', '4', '6', 'VI', 'VIII', 'X', 'XII'].sort());
+  // Labels: the home city, then the second zone with its offset.
+  assert.equal(root.querySelector('.label.home').textContent, 'LONDON');
+  assert.match(root.querySelector('.label.away').textContent, /^UTC/);
+  assert.match(el.getAttribute('aria-label'), /^Clock showing .+ in London, .+ in UTC$/);
+  el.remove();
+});
+
+test('dual clock: home side, a second zone, hidden labels and hidden seconds', async () => {
+  const el = mount('<bezel-clock variant="dual" home="left" timezone="Europe/London" second-timezone="Asia/Tokyo" hide-labels hide-seconds></bezel-clock>');
+  await flush();
+  const root = el.shadowRoot;
+  assert.ok(root.querySelector('svg.face').getAttribute('class').includes('home-left'));
+  assert.match(root.querySelector('.hour').getAttribute('transform'), / 50 50\)$/);
+  assert.match(root.querySelector('.z-hour').getAttribute('transform'), / 100 50\)$/);
+  assert.equal(root.querySelector('.label'), null);
+  assert.equal(root.querySelector('.second'), null);
+  assert.match(el.getAttribute('aria-label'), /in Tokyo$/);
+  // The other dial's dots stop under the home dial, so it has fewer than 60.
+  const dots = root.querySelectorAll('.dot').length;
+  assert.ok(dots > 60 && dots < 120, `${dots} dots`);
+  el.setAttribute('second-timezone', 'Not/AZone');
+  await flush();
+  assert.match(el.getAttribute('aria-label'), /in UTC$/, 'an invalid zone falls back to UTC');
+  el.remove();
+});
+
+test('dual clock: zone colour, onyx theme and a frame of your choice', async () => {
+  const el = mount('<bezel-clock variant="dual" theme="onyx" frame="device" style="--bezel-zone: #ff0066"></bezel-clock>');
+  await flush();
+  const css = el.shadowRoot.querySelector('style').textContent;
+  assert.match(css, /--_zone: var\(--bezel-zone, #8EA4FF\)/);
+  assert.match(css, /\.zone \.z-hour line \{ stroke: var\(--_zone\)/);
+  assert.ok(el.shadowRoot.querySelector('.frame--device'));
+  el.remove();
+});
+
+test('slender hands work on every dial', async () => {
+  for (const variant of ['numerals', 'classic', 'dual']) {
+    const el = mount(`<bezel-clock variant="${variant}" hands="slender"></bezel-clock>`);
+    await flush();
+    const root = el.shadowRoot;
+    assert.ok(root.querySelector('.hour.sl .sl-arm') && root.querySelector('.minute.sl'), variant);
+    assert.ok(root.querySelector('.second.sl-sec circle'), `${variant}: seconds counterweight`);
+    assert.ok(root.querySelector('.sl-hub') && root.querySelector('.sl-pin'));
+    el.remove();
+  }
+  const glance = mount('<bezel-glance hide-weather hands="slender"></bezel-glance>');
+  await flush();
+  assert.ok(glance.shadowRoot.querySelector('.hr.sl') && glance.shadowRoot.querySelector('.sc.sl-sec'));
+  glance.remove();
+});
+
+test('lume makes the numerals glow on the classic and dual faces only', async () => {
+  const el = mount('<bezel-clock variant="dual" theme="onyx" lume="blue"></bezel-clock>');
+  await flush();
+  assert.ok(el.shadowRoot.querySelector('svg.face').getAttribute('class').includes('lume'));
+  assert.ok(el.shadowRoot.querySelector('filter#lume'));
+  assert.match(el.shadowRoot.querySelector('style').textContent, /:host\(\[lume="blue"\]\) \{ --_glow: var\(--bezel-lume, #4AA6FF\)/);
+  el.setAttribute('variant', 'classic');
+  await flush();
+  assert.ok(el.shadowRoot.querySelector('svg.face').getAttribute('class').includes('lume'));
+  el.setAttribute('variant', 'numerals');
+  await flush();
+  assert.ok(!el.shadowRoot.querySelector('svg.face').getAttribute('class').includes('lume'));
+  el.setAttribute('variant', 'classic');
+  el.setAttribute('lume', 'purple');
+  await flush();
+  assert.ok(!el.shadowRoot.querySelector('svg.face').getAttribute('class').includes('lume'), 'unknown colours are ignored');
+  el.remove();
+});
+
+test('metal frame works on every tile', async () => {
+  for (const tag of ['bezel-clock', 'bezel-calendar', 'bezel-poster']) {
+    const el = mount(`<${tag} frame="metal"></${tag}>`);
+    await flush();
+    assert.ok(el.shadowRoot.querySelector('.frame--metal'), tag);
+    el.remove();
+  }
+  const el = mount('<bezel-clock variant="dual" frame="nonsense"></bezel-clock>');
+  await flush();
+  assert.ok(el.shadowRoot.querySelector('.frame--metal'), 'unknown frames fall back to the face default');
+  el.remove();
 });

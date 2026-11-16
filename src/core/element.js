@@ -20,7 +20,7 @@ export function safeLocale(tag) {
 }
 
 const COMMON_ATTRIBUTES = ['frame', 'theme', 'dark-theme', 'appearance', 'timezone', 'locale', 'hour-cycle'];
-const FRAMES = new Set(['device', 'bezel', 'none']);
+export const FRAMES = new Set(['device', 'bezel', 'metal', 'none']);
 
 /**
  * Base class for every Bezel tile.

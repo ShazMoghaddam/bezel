@@ -54,7 +54,8 @@
       tile.setAttribute(k, v);
     }
   }
-  tile.style.setProperty('--bezel-size', type === 'poster' ? 'min(94vw, calc(94vh * 4 / 3))' : 'min(90vw, 90vh)');
+  const wide = type === 'poster' ? '4 / 3' : type === 'clock' && params.get('variant') === 'dual' ? '3 / 2' : '';
+  tile.style.setProperty('--bezel-size', wide ? `min(94vw, calc(94vh * ${wide}))` : 'min(90vw, 90vh)');
   if (!params.has('frame') && type !== 'poster') tile.setAttribute('frame', 'none');
   document.getElementById('stage').append(tile);
 

@@ -16,7 +16,7 @@
 <meta property="og:image" content="https://shazmoghaddam.github.io/bezel/docs/social-preview.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
-<meta property="og:image:alt" content="Bezel tiles: an orange clock, a weather tile, a month calendar and a dark classic clock">
+<meta property="og:image:alt" content="Bezel tiles: a dark dual time zone clock with glowing numerals in a metal case, a weather tile and a month calendar">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#E7E9EC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D0E10" media="(prefers-color-scheme: dark)">
@@ -58,6 +58,10 @@
           <bezel-poster theme="noir" aria-hidden="true"></bezel-poster>
           <span class="show__label"><b>Poster</b><span>A month, set large</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
+        <button type="button" class="show" data-show="clock">
+          <bezel-clock variant="dual" hands="slender" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
+          <span class="show__label"><b>Dual</b><span>Two cities, one case</span><span class="sr-only"> (customise in the Studio)</span></span>
+        </button>
       </div>
       <div class="showcase__row">
         <button type="button" class="show" data-show="clock">
@@ -73,8 +77,8 @@
           <span class="show__label"><b>Glance</b><span>Clock, date, weather</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
         <button type="button" class="show" data-show="clock">
-          <bezel-clock variant="classic" theme="midnight" hands="lollipop" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
-          <span class="show__label"><b>Classic</b><span>Two time zones</span><span class="sr-only"> (customise in the Studio)</span></span>
+          <bezel-clock variant="classic" theme="midnight" hands="slender" lume="green" second-timezone="America/New_York" aria-hidden="true"></bezel-clock>
+          <span class="show__label"><b>Classic</b><span>Glowing numerals</span><span class="sr-only"> (customise in the Studio)</span></span>
         </button>
       </div>
     </div>
@@ -150,7 +154,7 @@
         </div>
         <div class="way__codes">
           <pre class="code" tabindex="0"><code data-code="web-cdn">&lt;script type="module"
-  src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.0.0/dist/bezel.min.js"&gt;&lt;/script&gt;
+  src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.0/dist/bezel.min.js"&gt;&lt;/script&gt;
 
 &lt;bezel-clock variant="relief"&gt;&lt;/bezel-clock&gt;</code></pre>
           <pre class="code" tabindex="0"><code data-code="web-npm">npm install github:ShazMoghaddam/bezel

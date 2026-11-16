@@ -1,4 +1,4 @@
-/*! Bezel v2.0.0 | MIT | github.com/ShazMoghaddam/bezel */
+/*! Bezel v2.1.0 | MIT | github.com/ShazMoghaddam/bezel */
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -15,6 +15,8 @@ var FRAME_CSS = (
   /* No metal rim: the black bezel is the outermost layer, so nothing light shows around it. */
   --_rim-pad: 0px;
   --_bezel-pad: var(--bezel-thickness, 1.7cqw);
+  --_metal-pad: var(--bezel-thickness, 2.1cqw);
+  --_lip: calc(var(--_metal-pad) * 0.22);
   /* Extra inset for content when corners are rounder than the 22cqw the layouts were drawn for,
      so text near a corner never runs into the curve. Zero at the default radius and below. */
   --_safe: max(0cqw, calc((var(--_rim-r) - 22cqw) * 0.36));
@@ -79,13 +81,15 @@ var FRAME_CSS = (
   color: var(--_ink);
   isolation: isolate;
 }
-.frame--device .screen::after {
+.frame--device .screen::after, .frame--metal .screen::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
   z-index: 50;
+}
+.frame--device .screen::after {
   background: linear-gradient(155deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 34%);
   box-shadow: inset 0 0 0 0.15cqw rgba(0,0,0,.2);
 }
@@ -96,6 +100,13 @@ var FRAME_CSS = (
   box-shadow: 0 1.2cqw 3cqw -1cqw rgba(0,0,0,.35);
 }
 .frame--bezel .screen { border-radius: calc(var(--_rim-r) - var(--_bezel-pad)); }
+
+.frame--metal { border-radius: var(--_rim-r); padding: var(--_metal-pad);
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,.025) 1px 2px), linear-gradient(#F7F7F8, #DADCDF 22%, #C3C6CA 55%, #A9ADB3);
+  box-shadow: inset 0 .25cqw .2cqw rgba(255,255,255,.9), inset 0 -.3cqw .4cqw rgba(0,0,0,.18), 0 .4cqw .6cqw rgba(0,0,0,.1), 0 3cqw 5cqw -1.5cqw rgba(0,0,0,.28); }
+.frame--metal .bezel { border-radius: calc(var(--_rim-r) - var(--_metal-pad)); padding: var(--_lip); background: linear-gradient(#9EA2A8, #D9DBDE 60%, #EEEFF0); }
+.frame--metal .screen { border-radius: calc(var(--_rim-r) - var(--_metal-pad) - var(--_lip)); }
+.frame--metal .screen::after { box-shadow: inset 0 .9cqw 1.4cqw -.4cqw rgba(0,0,0,.28), inset 0 0 0 .12cqw rgba(0,0,0,.12); }
 
 /* None: just the screen, for embedding inside your own UI. */
 .frame--none .bezel { padding: 0; background: none; box-shadow: none; border-radius: var(--_rim-r); }
@@ -364,7 +375,7 @@ function safeLocale(tag) {
   return ok;
 }
 var COMMON_ATTRIBUTES = ["frame", "theme", "dark-theme", "appearance", "timezone", "locale", "hour-cycle"];
-var FRAMES = /* @__PURE__ */ new Set(["device", "bezel", "none"]);
+var FRAMES = /* @__PURE__ */ new Set(["device", "bezel", "metal", "none"]);
 var BezelElement = class extends HTMLElement {
   static attributes = [];
   static styles = "";
@@ -549,7 +560,7 @@ function define(tag, ctor) {
 }
 
 // src/core/hands.js
-var HAND_STYLES = ["modern", "lollipop"];
+var HAND_STYLES = ["modern", "lollipop", "slender"];
 function handStyle(value) {
   return HAND_STYLES.includes(value) ? value : "modern";
 }
@@ -583,6 +594,33 @@ function lollipopHands({
     <circle class="lp-pivot" cx="${cx}" cy="${cy}" r="${f(w(2.05))}" />
     <circle class="lp-pin" cx="${cx}" cy="${cy}" r="${f(w(0.62))}" />`;
 }
+function slenderHands({
+  cx = 50,
+  cy = 50,
+  hour,
+  minute,
+  second,
+  tail = 7,
+  weight = 1,
+  seconds = true,
+  classes = { hour: "hour", minute: "minute", second: "second" },
+  extra = ""
+}) {
+  const w = (n) => n * weight;
+  const secondHand2 = seconds ? `<g class="${extra} sl-sec ${classes.second}">
+        <line x1="${cx}" y1="${f(cy + tail)}" x2="${cx}" y2="${f(cy - second)}" stroke-width="${f(w(0.26))}" />
+        <circle cx="${cx}" cy="${f(cy + tail - w(0.9))}" r="${f(w(0.85))}" />
+      </g>` : "";
+  return `
+    <g class="${extra} sl ${classes.hour}"><path class="sl-arm" d="${baton(cx, cy + w(2.4), hour + w(2.4), w(0.72), w(0.48))}" /></g>
+    <g class="${extra} sl ${classes.minute}"><path class="sl-arm" d="${baton(cx, cy + w(3.2), minute + w(3.2), w(0.5), w(0.28))}" /></g>
+    ${secondHand2}
+    <circle class="sl-hub" cx="${cx}" cy="${cy}" r="${f(w(1.45))}" />
+    <circle class="sl-pin" cx="${cx}" cy="${cy}" r="${f(w(0.52))}" />`;
+}
+function styledHands(style, options) {
+  return style === "slender" ? slenderHands(options) : lollipopHands(options);
+}
 var HANDS_CSS = (
   /* css */
   `
@@ -590,13 +628,18 @@ var HANDS_CSS = (
   .lp-sec line { stroke: var(--_accent); stroke-linecap: round; }
   .lp-sec circle { fill: var(--_accent); }
   .lp-pin { fill: color-mix(in srgb, var(--_hand), #000 88%); }
+  .sl-arm, .sl-hub { fill: var(--_hand); }
+  .sl-pin { fill: var(--_surface); }
+  .sl-sec line { stroke: var(--_accent); stroke-linecap: round; }
+  .sl-sec circle { fill: var(--_accent); }
 `
 );
 
 // src/tiles/clock.js
-var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic"]);
+var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic", "dual"]);
 var SCRIPTS = /* @__PURE__ */ new Set(["western", "roman", "persian"]);
-var DEFAULT_THEME = { numerals: "sage", relief: "blush", classic: "porcelain" };
+var DEFAULT_THEME = { numerals: "sage", relief: "blush", classic: "porcelain", dual: "porcelain" };
+var LUME = /* @__PURE__ */ new Set(["green", "blue"]);
 var ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
 var PERSIAN_DIGITS = "\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9";
 function numeral(h, script = "western") {
@@ -620,17 +663,26 @@ function cityName(timeZone) {
   return String(timeZone ?? "").split("/").pop().replace(/_/g, " ");
 }
 var C = 50;
+function deviceZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
 function hand({ cls, stem, length, width, cx = C, cy = C }) {
   return `<g class="hand ${cls}">
     <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - stem}" stroke-width="${Math.max(0.5, width * 0.32)}" />
     <line x1="${cx}" y1="${cy - stem}" x2="${cx}" y2="${cy - length}" stroke-width="${width}" />
   </g>`;
 }
-function secondHand(length, tail) {
+function secondHand(length, tail, cx = C, cy = C, width = 0.55) {
   return `<g class="hand second">
-    <line x1="${C}" y1="${C + tail}" x2="${C}" y2="${C - length}" stroke-width="0.55" />
+    <line x1="${cx}" y1="${cy + tail}" x2="${cx}" y2="${cy - length}" stroke-width="${width}" />
   </g>`;
 }
+var DUAL = { left: { x: 50, y: 50 }, right: { x: 100, y: 50 }, r: 39 };
+var DUAL_ROMAN = { 12: "XII", 10: "X", 8: "VIII", 6: "VI" };
 var DEFS = (
   /* svg */
   `
@@ -654,6 +706,11 @@ var DEFS = (
       <feMergeNode in="inner" />
     </feMerge>
   </filter>
+  <filter id="lume" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+    <feFlood class="lume-glow" /><feComposite in2="SourceAlpha" operator="in" result="shape" />
+    <feGaussianBlur in="shape" stdDeviation="0.45" result="near" /><feGaussianBlur in="shape" stdDeviation="1.3" />
+    <feMerge><feMergeNode /><feMergeNode in="near" /><feMergeNode in="SourceGraphic" /></feMerge>
+  </filter>
 </defs>`
 );
 var BIG = {
@@ -662,16 +719,20 @@ var BIG = {
   persian: { size: 50, items: [[12, 50, 44], [9, 20, 69], [3, 80, 69], [6, 50, 95]] }
 };
 var BezelClock = class _BezelClock extends BezelElement {
-  static attributes = ["variant", "numerals", "hide-seconds", "hide-date", "sweep", "second-timezone", "second-label", "hands"];
+  static attributes = ["variant", "numerals", "hide-seconds", "hide-date", "sweep", "second-timezone", "second-label", "hands", "home", "hide-labels", "lume"];
+  // `zone` colours the second time zone's hour hand on the dual face.
+  // Dual styles: a landscape case whose round ends share their centres with the two dials.
+  // Lume: numerals that glow, as on a watch dial; best on dark faces.
   static themes = {
-    sage: { surface: "#5C9268", ink: "#0A0C0A", hand: "#FFFFFF", accent: "#E3F4E6" },
-    cobalt: { surface: "#2D4BD2", ink: "#F3F5FF", hand: "#FFFFFF", accent: "#FFD43B" },
-    ember: { surface: "#E25A2C", ink: "#1A0E09", hand: "#FFF6EF", accent: "#FFF6EF" },
-    graphite: { surface: "#121315", ink: "#F2F2F0", hand: "#F2F2F0", accent: "#FF6B35" },
-    blush: { surface: "#E7C8C2", ink: "#5A2A26", hand: "#6E2B27", accent: "#E8409E" },
-    stone: { surface: "#D9DADC", ink: "#2B2D31", hand: "#25272B", accent: "#FF5A1F" },
-    midnight: { surface: "#1B1F27", ink: "#E9E3D6", hand: "#E9E3D6", accent: "#FFB547" },
-    porcelain: { surface: "#F4F4F2", ink: "#17181A", hand: "#17181A", accent: "#FF5A1F" }
+    sage: { surface: "#5C9268", ink: "#0A0C0A", hand: "#FFFFFF", accent: "#E3F4E6", zone: "#0A0C0A" },
+    cobalt: { surface: "#2D4BD2", ink: "#F3F5FF", hand: "#FFFFFF", accent: "#FFD43B", zone: "#FFD43B" },
+    ember: { surface: "#E25A2C", ink: "#1A0E09", hand: "#FFF6EF", accent: "#FFF6EF", zone: "#1A0E09" },
+    graphite: { surface: "#121315", ink: "#F2F2F0", hand: "#F2F2F0", accent: "#FF6B35", zone: "#FF6B35" },
+    blush: { surface: "#E7C8C2", ink: "#5A2A26", hand: "#6E2B27", accent: "#E8409E", zone: "#E8409E" },
+    stone: { surface: "#D9DADC", ink: "#2B2D31", hand: "#25272B", accent: "#FF5A1F", zone: "#2346D8" },
+    midnight: { surface: "#1B1F27", ink: "#E9E3D6", hand: "#E9E3D6", accent: "#FFB547", zone: "#FFB547" },
+    porcelain: { surface: "#F4F4F2", ink: "#17181A", hand: "#17181A", accent: "#FF5A1F", zone: "#2440A8" },
+    onyx: { surface: "#161719", ink: "#ECECEA", hand: "#D3D6DA", accent: "#FF7A45", zone: "#8EA4FF" }
   };
   static styles = (
     /* css */
@@ -717,6 +778,22 @@ var BezelClock = class _BezelClock extends BezelElement {
     .sub .city { font-family: var(--_font); font-size: 2.3px; font-weight: 650; letter-spacing: 0.12em; fill: var(--_ink); opacity: .8; }
     .sub .off { font-weight: 550; letter-spacing: 0.04em; opacity: .6; }
 
+    :host([variant="dual"]) { aspect-ratio: var(--bezel-aspect, 3 / 2); --_rim-r: var(--bezel-radius, 33.34cqw);
+      --_bezel-pad: var(--bezel-thickness, 1.13cqw); --_metal-pad: var(--bezel-thickness, 2.3cqw); }
+    :host([variant="dual"]) .frame--none .screen { border-radius: var(--_rim-r); }
+    .v-dual .dot { fill: var(--_ink); }
+    .v-dual .numeral { font-weight: 450; letter-spacing: -0.01em; }
+    .v-dual .roman { letter-spacing: -0.05em; }
+    .v-dual .label { font-family: var(--_font); font-weight: 600; letter-spacing: 0.16em; fill: var(--_ink); fill-opacity: .55; }
+    .v-dual .label .off { font-weight: 500; letter-spacing: 0.06em; fill-opacity: .75; }
+    .zone .z-hour line { stroke: var(--_zone); }
+    .zone .z-hour .lp-arm, .zone .z-hour .sl-arm, .zone .sl-hub, .zone .lp-pivot, .zone .hub { fill: var(--_zone); }
+
+    :host([lume="green"]) { --_glow: var(--bezel-lume, #49F28E); }
+    :host([lume="blue"]) { --_glow: var(--bezel-lume, #4AA6FF); }
+    .lume .numeral { fill: color-mix(in srgb, var(--_ink) 70%, var(--_glow)); filter: url(#lume); }
+    .lume-glow { flood-color: var(--_glow); flood-opacity: .9; }
+
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
   `
@@ -735,9 +812,31 @@ var BezelClock = class _BezelClock extends BezelElement {
     const t = this.getAttribute("theme");
     return t && _BezelClock.themes[t] ? t : DEFAULT_THEME[this.variant];
   }
+  /** The dual face defaults to the metal frame; every other face to the black bezel. */
+  get frame() {
+    const f2 = this.getAttribute("frame");
+    if (FRAMES.has(f2)) return f2;
+    return this.variant === "dual" ? "metal" : "device";
+  }
   get secondZone() {
     const tz = this.getAttribute("second-timezone");
-    return this.variant === "classic" && tz && isValidTimeZone(tz) ? tz : null;
+    const valid = tz && isValidTimeZone(tz) ? tz : null;
+    if (this.variant === "dual") return valid ?? "UTC";
+    return this.variant === "classic" ? valid : null;
+  }
+  /** Dual face: the side showing local time. */
+  get homeSide() {
+    return this.getAttribute("home") === "left" ? "left" : "right";
+  }
+  /** Glowing numerals, on the faces that support them. */
+  get lume() {
+    const l = this.getAttribute("lume");
+    return LUME.has(l) && (this.variant === "classic" || this.variant === "dual") ? l : null;
+  }
+  #centres() {
+    const home = DUAL[this.homeSide];
+    const away = this.homeSide === "right" ? DUAL.left : DUAL.right;
+    return { home, away };
   }
   get hands() {
     return handStyle(this.getAttribute("hands"));
@@ -751,6 +850,7 @@ var BezelClock = class _BezelClock extends BezelElement {
   }
   template() {
     const v = this.variant;
+    if (v === "dual") return this.#dual();
     const script = this.script;
     let dial = "";
     if (v === "numerals") {
@@ -813,12 +913,12 @@ var BezelClock = class _BezelClock extends BezelElement {
     }
     const heavy = v === "classic" ? 2.2 : 3.1;
     const classic = v === "classic";
-    const hands = this.hands === "lollipop" ? `<g class="hands">${lollipopHands({
+    const hands = this.hands !== "modern" ? `<g class="hands">${styledHands(this.hands, {
       hour: classic ? 21 : 26,
       minute: classic ? 33.5 : 39,
       second: classic ? 31.5 : 37,
       tail: classic ? 7 : 8,
-      weight: classic ? 1 : 1.12,
+      weight: (classic ? 1 : 1.12) * (this.hands === "slender" ? 1.1 : 1),
       seconds: this.showSeconds,
       extra: "hand"
     })}</g>` : `
@@ -832,9 +932,63 @@ var BezelClock = class _BezelClock extends BezelElement {
       </g>`;
     const dir = script === "persian" ? ' direction="ltr"' : "";
     const corner = v === "numerals" ? '<span class="date corner-date" aria-hidden="true"></span>' : "";
-    return `${corner}<svg class="face v-${v} s-${script}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
+    const lume = this.lume ? " lume" : "";
+    return `${corner}<svg class="face v-${v} s-${script}${lume}" viewBox="0 0 100 100" aria-hidden="true"${dir}>${DEFS}${dial}${hands}</svg>`;
+  }
+  /** The dual face: two overlapping dials, Roman on the left and Arabic on the right. */
+  #dual() {
+    const { r: R } = DUAL;
+    const { home, away } = this.#centres();
+    const homeSide = this.homeSide;
+    const awaySide = homeSide === "right" ? "left" : "right";
+    const arabic = this.script === "persian" ? "persian" : "western";
+    const n = (v) => Number(v.toFixed(2));
+    const track = (c, under) => Array.from({ length: 60 }, (_, i) => {
+      const a = i * 6 * Math.PI / 180;
+      const x = c.x + Math.sin(a) * R;
+      const y = c.y - Math.cos(a) * R;
+      if (under && Math.hypot(x - under.x, y - under.y) < R + 1.6) return "";
+      return `<circle class="dot" cx="${n(x)}" cy="${n(y)}" r="${i % 5 ? 0.36 : 0.62}" />`;
+    }).join("");
+    const numerals = (c, side) => (side === "left" ? [12, 10, 8, 6] : [12, 2, 4, 6]).map((h) => {
+      const a = h % 12 * 30 * Math.PI / 180;
+      const roman = side === "left";
+      const text = roman ? DUAL_ROMAN[h] : numeral(h, arabic);
+      return `<text class="numeral${roman ? " roman" : ""}" x="${n(c.x + Math.sin(a) * (R - 6.6))}" y="${n(c.y - Math.cos(a) * (R - 6.6))}" font-size="${roman ? 4.6 : 5}" text-anchor="middle" dominant-baseline="central">${text}</text>`;
+    }).join("");
+    let labels = "";
+    if (!this.flag("hide-labels")) {
+      const label = (c, name, cls, dx) => {
+        const text = name.toLocaleUpperCase(this.locale);
+        const size = Math.min(2.55, 2.55 * 13 / Math.max(13, text.length + 3));
+        return `<text class="label ${cls}" x="${c.x + dx}" y="${c.y + 13}" font-size="${size.toFixed(2)}" text-anchor="middle">${esc(text)}${cls === "away" ? '<tspan class="off" dx="0.9"></tspan>' : ""}</text>`;
+      };
+      labels = label(home, cityName(this.timeZone ?? deviceZone()), "home", 0) + label(away, this.getAttribute("second-label") || cityName(this.secondZone), "away", awaySide === "left" ? -6 : 6);
+    }
+    const style = this.hands;
+    const seconds = this.showSeconds;
+    const set = (c, classes, withSeconds) => {
+      if (style !== "modern") {
+        return styledHands(style, {
+          cx: c.x,
+          cy: c.y,
+          classes,
+          seconds: withSeconds,
+          extra: "hand",
+          ...style === "slender" ? { hour: R * 0.58, minute: R * 0.9, second: R * 0.95, tail: 7, weight: 0.86 } : { hour: R * 0.55, minute: R * 0.86, second: R * 0.82, tail: 6, weight: 0.72 }
+        });
+      }
+      return `${hand({ cls: classes.hour, stem: 4.3, length: R * 0.55, width: 1.8, cx: c.x, cy: c.y })}${hand({ cls: classes.minute, stem: 4.3, length: R * 0.86, width: 1.8, cx: c.x, cy: c.y })}${withSeconds ? secondHand(R * 0.95, 6, c.x, c.y, 0.4) : ""}<circle class="hub" cx="${c.x}" cy="${c.y}" r="1.3" /><circle class="hub-pin" cx="${c.x}" cy="${c.y}" r="0.45" />`;
+    };
+    const lume = this.lume ? " lume" : "";
+    const dir = arabic === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-dual home-${homeSide}${lume}" viewBox="0 0 150 100" aria-hidden="true"${dir}>${DEFS}${track(home)}${track(away, home)}${numerals(home, homeSide)}${numerals(away, awaySide)}${labels}<g class="hands"><g class="zone">${set(away, { hour: "z-hour", minute: "z-minute", second: "z-second" }, false)}</g>${set(home, { hour: "hour", minute: "minute", second: "second" }, seconds)}</g></svg>`;
   }
   update(z, first) {
+    if (this.variant === "dual") {
+      this.#updateDual(z, first);
+      return;
+    }
     const smooth = this.tickRate === "frame";
     const a = handAngles(z, { smooth });
     this.$(".hour")?.setAttribute("transform", `rotate(${a.hour.toFixed(3)} ${C} ${C})`);
@@ -862,6 +1016,24 @@ var BezelClock = class _BezelClock extends BezelElement {
       this.#relief(a.minute);
     }
   }
+  #updateDual(z, first) {
+    const smooth = this.tickRate === "frame";
+    const { home, away } = this.#centres();
+    const turn = (sel, deg, c) => this.$(sel)?.setAttribute("transform", `rotate(${deg.toFixed(3)} ${c.x} ${c.y})`);
+    const a = handAngles(z, { smooth });
+    turn(".hour", a.hour, home);
+    turn(".minute", a.minute, home);
+    turn(".second", a.second, home);
+    const zone = this.secondZone;
+    const b = handAngles(zoned(z.ms, zone), { smooth });
+    turn(".z-hour", b.hour, away);
+    turn(".z-minute", b.minute, away);
+    if (first || z.minutes !== this.#dateMinute) {
+      this.#dateMinute = z.minutes;
+      const off = this.$(".away .off");
+      if (off) off.textContent = zoneOffset(z.ms, this.timeZone, zone);
+    }
+  }
   /** Numerals near the minute hand rise to full size; the rest recede into the surface. */
   #relief(minuteAngle) {
     const pos = minuteAngle / 30;
@@ -880,7 +1052,8 @@ var BezelClock = class _BezelClock extends BezelElement {
     const fmt = (tz) => new Intl.DateTimeFormat(this.locale, { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: tz }).format(z.ms);
     const zone = this.secondZone;
     const second = zone ? `, ${fmt(zone)} in ${this.getAttribute("second-label") || cityName(zone)}` : "";
-    return `Clock showing ${fmt(this.timeZone)}${second}`;
+    const home = this.variant === "dual" ? ` in ${cityName(this.timeZone ?? deviceZone())}` : "";
+    return `Clock showing ${fmt(this.timeZone)}${home}${second}`;
   }
 };
 define("bezel-clock", BezelClock);
@@ -2063,7 +2236,7 @@ function miniDial(style) {
   return `<svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
     <circle class="plate" cx="50" cy="50" r="48"/>
     ${ticks}${nums}
-    ${style === "lollipop" ? lollipopHands({ hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: "hr", minute: "mn", second: "sc" } }) : `<g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
+    ${style !== "modern" ? styledHands(style, { hour: 24, minute: 36, second: 34, tail: 8, weight: 1.45, classes: { hour: "hr", minute: "mn", second: "sc" } }) : `<g class="h hr"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="27"/></g>
     <g class="h mn"><line x1="50" y1="50" x2="50" y2="44"/><line class="w" x1="50" y1="44" x2="50" y2="13"/></g>
     <g class="h sc"><line x1="50" y1="58" x2="50" y2="8"/></g>
     <circle class="hub" cx="50" cy="50" r="2.4"/><circle class="pin" cx="50" cy="50" r="0.9"/>`}
@@ -2097,8 +2270,10 @@ var BezelGlance = class extends BezelElement {
     .dial .h line.w { stroke-width: 3.6; }
     .dial .sc line { stroke: var(--_accent); stroke-width: .9; }
     .dial .hub { fill: var(--_hand); } .dial .pin { fill: var(--_accent); }
-    .dial .h, .dial .lp, .dial .lp-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
+    .dial .h, .dial .lp, .dial .lp-sec, .dial .sl, .dial .sl-sec { filter: drop-shadow(0 .4px .5px rgba(0,0,0,.2)); }
     ${HANDS_CSS}
+    .dial .sl-sec line { stroke-width: .42; }
+    .dial .sl-pin { fill: var(--_soft); }
 
     .agenda { display: grid; align-content: end; gap: 2.2cqw; min-inline-size: 0; }
     .ev { display: grid; gap: .2cqw; padding-inline-start: 2.6cqw; border-inline-start: 0.9cqw solid var(--_accent); min-inline-size: 0; }
@@ -2287,7 +2462,7 @@ var BezelPoster = class extends BezelElement {
     `
     /* Bezel thickness is a share of the tile's width, and the poster is wider than it is tall.
        Three quarters of the usual width share gives the same bezel as a square tile of the same height. */
-    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); --_bezel-pad: var(--bezel-thickness, 1.275cqw); }
+    :host { aspect-ratio: var(--bezel-aspect, 4 / 3); --_rim-r: var(--bezel-radius, 4cqw); --_bezel-pad: var(--bezel-thickness, 1.275cqw); --_metal-pad: var(--bezel-thickness, 1.575cqw); }
     .frame--none .screen { border-radius: var(--_rim-r); }
     .p { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4.2cqw 2.4cqw 2.4cqw; overflow: hidden; }
     .title { justify-self: end; font-size: 4cqw; font-weight: 700; letter-spacing: -0.02em; padding-inline-end: 6cqw; margin-block-end: 2cqh; font-variant-numeric: lining-nums; }
@@ -2338,7 +2513,7 @@ var BezelPoster = class extends BezelElement {
 define("bezel-poster", BezelPoster);
 
 // src/index.js
-var version = "2.0.0";
+var version = "2.1.0";
 export {
   BezelCalendar,
   BezelClock,
