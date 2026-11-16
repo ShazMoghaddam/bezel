@@ -3,7 +3,8 @@
  * mini dial in <bezel-glance>).
  *
  *   modern     the original design: a thin stem from the hub, then a capsule
- *   lollipop   tapered baton hands, a pivot cap with a dark pin, and a fine
+ *   lollipop   tapered baton hands, a layered pivot cap like the modern hands
+ *              (hand-coloured disc, accent ring, face-coloured pin) and a fine
  *              seconds hand that ends in a round dot
  *   slender    needle-thin tapered hands with a short tail, a small pivot and a
  *              hairline seconds hand with a round counterweight
@@ -64,6 +65,7 @@ export function lollipopHands({
     <g class="${extra} lp ${classes.minute}"><path class="lp-arm" d="${baton(cx, cy, minute, w(1.2), w(0.72))}" /></g>
     ${secondHand}
     <circle class="lp-pivot" cx="${cx}" cy="${cy}" r="${f(w(2.05))}" />
+    ${seconds ? `<circle class="lp-ring" cx="${cx}" cy="${cy}" r="${f(w(1.35))}" stroke-width="${f(w(0.6))}" />` : ''}
     <circle class="lp-pin" cx="${cx}" cy="${cy}" r="${f(w(0.62))}" />`;
 }
 
@@ -110,7 +112,8 @@ export const HANDS_CSS = /* css */ `
   .lp-arm, .lp-pivot { fill: var(--_hand); }
   .lp-sec line { stroke: var(--_accent); stroke-linecap: round; }
   .lp-sec circle { fill: var(--_accent); }
-  .lp-pin { fill: color-mix(in srgb, var(--_hand), #000 88%); }
+  .lp-ring { fill: none; stroke: var(--_accent); }
+  .lp-pin { fill: var(--_surface); }
   .sl-arm, .sl-hub { fill: var(--_hand); }
   .sl-pin { fill: var(--_surface); }
   .sl-sec line { stroke: var(--_accent); stroke-linecap: round; }

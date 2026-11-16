@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2.1.1 (2026-11-16)
 
+- **Fix:** Lollipop hands now finish the centre with the same layered cap as Modern: a hub in the hand colour, a thin accent ring when the seconds hand is on, and a pin in the face colour. Before, the pin was near-black on every face, so it looked like a hole on light and coloured dials.
+- Studio: the time zone picker now covers every time zone the browser knows (over 400), shown by city with its region and current offset, like "Seoul, Asia · GMT+9". Type part of a city and pick it, or clear the box to follow this device. The same picker sets the second time zone on the Classic and Dual faces. Older browsers without the full list keep the previous 13 cities. A few cities share a bigger neighbour's zone (Calgary runs on Edmonton time), as on most sites.
 - Housekeeping: the bundle's gzip size budget rises from 27 kB to 28 kB. 2.1.0 landed just under the old limit, so this leaves room for small fixes without CI failing. The README now gives the current size, about 27 kB.
 
 ## 2.1.0 (2026-11-16)
