@@ -1,4 +1,4 @@
-/*! Bezel v2.1.0 | MIT | github.com/ShazMoghaddam/bezel */
+/*! Bezel v2.1.1 | MIT | github.com/ShazMoghaddam/bezel */
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -592,6 +592,7 @@ function lollipopHands({
     <g class="${extra} lp ${classes.minute}"><path class="lp-arm" d="${baton(cx, cy, minute, w(1.2), w(0.72))}" /></g>
     ${secondHand2}
     <circle class="lp-pivot" cx="${cx}" cy="${cy}" r="${f(w(2.05))}" />
+    ${seconds ? `<circle class="lp-ring" cx="${cx}" cy="${cy}" r="${f(w(1.35))}" stroke-width="${f(w(0.6))}" />` : ""}
     <circle class="lp-pin" cx="${cx}" cy="${cy}" r="${f(w(0.62))}" />`;
 }
 function slenderHands({
@@ -627,7 +628,8 @@ var HANDS_CSS = (
   .lp-arm, .lp-pivot { fill: var(--_hand); }
   .lp-sec line { stroke: var(--_accent); stroke-linecap: round; }
   .lp-sec circle { fill: var(--_accent); }
-  .lp-pin { fill: color-mix(in srgb, var(--_hand), #000 88%); }
+  .lp-ring { fill: none; stroke: var(--_accent); }
+  .lp-pin { fill: var(--_surface); }
   .sl-arm, .sl-hub { fill: var(--_hand); }
   .sl-pin { fill: var(--_surface); }
   .sl-sec line { stroke: var(--_accent); stroke-linecap: round; }
@@ -2513,7 +2515,7 @@ var BezelPoster = class extends BezelElement {
 define("bezel-poster", BezelPoster);
 
 // src/index.js
-var version = "2.1.0";
+var version = "2.1.1";
 export {
   BezelCalendar,
   BezelClock,

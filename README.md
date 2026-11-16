@@ -37,7 +37,7 @@ Bezel is a set of free, open-source web components: five tiles drawn entirely in
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.0/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.1/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief" theme="ember"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>
