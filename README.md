@@ -15,7 +15,7 @@ Bezel is a set of free, open-source web components: five tiles drawn entirely in
 - **Yours to style.** Any colour, a light and a dark colour set, three hand designs, three typefaces ready to go, rounder or squarer corners, and a black bezel, a brushed metal case or no frame at all.
 - **Live data, no keys.** Weather and air quality from [Open-Meteo](https://open-meteo.com), free and keyless. Agendas from standard `.ics` calendar feeds.
 - **Speaks your language.** Dates, times and weather words in English, French, German, Spanish, Italian, Japanese and Persian.
-- **Light.** About 25 kB gzipped with no dependencies and no build step. Every tile on a page shares one timer and pauses when off screen.
+- **Light.** About 27 kB gzipped with no dependencies and no build step. Every tile on a page shares one timer and pauses when off screen.
 - **Accessible.** Each tile describes itself to screen readers and respects reduced-motion settings.
 
 ## Contents
@@ -318,7 +318,7 @@ ubersicht/     the macOS desktop widget
 test/          node:test suites
 ```
 
-Each tile extends `BezelElement`, which handles the frame, colours, shadow DOM, the shared ticker and visibility. A new tile needs a `template()` that returns its markup and an `update()` that moves whatever changes each tick. The bundle has a 27 kB gzip budget, checked in CI. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Each tile extends `BezelElement`, which handles the frame, colours, shadow DOM, the shared ticker and visibility. A new tile needs a `template()` that returns its markup and an `update()` that moves whatever changes each tick. The bundle has a 28 kB gzip budget, checked in CI. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits
 
