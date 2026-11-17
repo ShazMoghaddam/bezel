@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.2.0 (2026-11-17)
+
+- **City labels:** a new `label` attribute names the home dial on the Dual face, to match `second-label` on the second dial. Cities that share a time zone can now show their own name, for example `timezone="Europe/Berlin" label="Munich"`. Without it, the dial is named after its zone as before.
+- Studio: a new time zone picker, replacing the browser's own suggestion list, which looked different in every browser and couldn't find cities like Munich. It now:
+  - lists about 300 well-known cities, adapted from the split-flap world clock, so places that share a zone (Munich, Manchester, Rio) are there by name
+  - searches by city, country or other names (Bombay, München, United Kingdom), ignoring accents
+  - shows each city's local time and current offset, worked out live so summer time is always right
+  - still finds every zone the browser knows, like Aqtobe or `Asia/Tehran`, below the hand-picked cities
+  - matches the Studio's look in light and dark, and stays in view on phones
+  - works with arrow keys, Page Up/Down, Enter and Esc, and announces results to screen readers
+- Studio: picking a city on a clock sets `label` or `second-label` when the zone's own name would say something else. Copied code only includes them where the tile shows them.
+
 ## 2.1.1 (2026-11-16)
 
 - **Fix:** Lollipop hands now finish the centre with the same layered cap as Modern: a hub in the hand colour, a thin accent ring when the seconds hand is on, and a pin in the face colour. Before, the pin was near-black on every face, so it looked like a hole on light and coloured dials.

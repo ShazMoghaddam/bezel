@@ -244,6 +244,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .panel { overflow: visible; }
   .ptabs { position: sticky; top: calc(56px + clamp(240px, 44vh, 400px) + env(safe-area-inset-top, 0px)); z-index: 4; border-radius: var(--r-3) var(--r-3) 0 0; }
   .panel__body { overflow: visible; }
+  /* Clear of the pinned preview and settings tabs when the picker scrolls itself into view. */
+  .zp { scroll-margin-top: calc(56px + clamp(240px, 44vh, 400px) + 64px + env(safe-area-inset-top, 0px)); }
+  .zp__list { max-height: min(288px, 36vh); }
 }
 .field { display: grid; gap: 7px; }
 .field > label, .field__l { font-size: 13px; font-weight: 550; color: var(--ink-2); display: flex; justify-content: space-between; gap: var(--s-2); }
@@ -315,6 +318,35 @@ select { appearance: none; -webkit-appearance: none; padding-right: 30px;
 .toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s; }
 .toggle input:checked { background: var(--ink); }
 .toggle input:checked::after { transform: translateX(16px); background: var(--panel); }
+/* Time zone picker: a search box with a list of cities that opens in place, so the scrolling panel never clips it. */
+.zp__box { position: relative; }
+.zp__box input { padding-right: 84px; text-overflow: ellipsis; }
+.zp__box input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus), transparent 80%); }
+.zp__off { position: absolute; right: 36px; top: 50%; transform: translateY(-50%); font: 500 12px/1 var(--f-mono); color: var(--ink-3); pointer-events: none; font-variant-numeric: tabular-nums; }
+.zp.is-open .zp__off { visibility: hidden; }
+.zp__toggle { all: unset; position: absolute; right: 4px; top: 4px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; color: var(--ink-3); cursor: pointer; }
+.zp__toggle:hover { color: var(--ink); background: color-mix(in srgb, var(--ink), transparent 94%); }
+.zp__toggle svg { transition: transform .18s ease; }
+.zp.is-open .zp__toggle svg { transform: rotate(180deg); }
+.zp__list {
+  position: relative; list-style: none; margin: 0; padding: 4px; max-height: 288px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  border: 1px solid var(--line-soft); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow);
+  animation: zp-in .14s ease-out;
+}
+@keyframes zp-in { from { opacity: 0; transform: translateY(-4px); } }
+.zp__opt { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 8px 10px; border-radius: 8px; cursor: pointer; scroll-margin: 4px; }
+.zp__opt:hover { background: var(--ground-2); }
+.zp__opt[aria-selected="true"] { background: color-mix(in srgb, var(--focus), transparent 88%); }
+.zp__opt.is-none { border-bottom: 1px solid var(--line-soft); border-radius: 8px 8px 0 0; margin-bottom: 4px; }
+.zp__name { display: grid; gap: 2px; min-width: 0; }
+.zp__city { font-size: 14px; font-weight: 550; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zp__where { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zp__meta { display: grid; justify-items: end; gap: 2px; flex: none; font-variant-numeric: tabular-nums; }
+.zp__time { font: 500 13px/1.2 var(--f-mono); color: var(--ink); }
+.zp__gmt { font: 500 11px/1.2 var(--f-mono); color: var(--ink-3); }
+.zp__opt.is-current .zp__city::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 8px; vertical-align: middle; border-radius: 50%; background: var(--accent); }
+.zp__empty { padding: 14px 10px; font-size: 13px; color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .zp__list { animation: none; } .zp__toggle svg { transition: none; } }
 .hint { font-size: 12px; color: var(--ink-3); line-height: 1.45; }
 
 /* ---- Get the code: four equal cards, one detail panel open at a time ----

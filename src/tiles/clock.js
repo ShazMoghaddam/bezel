@@ -14,6 +14,8 @@ import { handStyle, styledHands, baton, HANDS_CSS } from '../core/hands.js';
  *   second-timezone  classic: a small second dial for another city, e.g. "America/New_York"
  *                    dual: the time on the second dial (default UTC)
  *   second-label     name shown on that dial (default: the city from the time zone)
+ *   label            dual only: name shown on the home dial (default: the city from the time zone),
+ *                    for cities that share a zone, e.g. timezone="Europe/Berlin" label="Munich"
  *   home             dual only: left | right, the side that shows local time (default right)
  *   hide-labels      dual only: hide the city names
  *   lume             classic and dual: green | blue, glowing numerals
@@ -126,7 +128,7 @@ const BIG = {
 };
 
 class BezelClock extends BezelElement {
-  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'hands', 'home', 'hide-labels', 'lume'];
+  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'label', 'hands', 'home', 'hide-labels', 'lume'];
 
   // `zone` colours the second time zone's hour hand on the dual face.
   // Dual styles: a landscape case whose round ends share their centres with the two dials.
@@ -235,6 +237,11 @@ class BezelClock extends BezelElement {
     const valid = tz && isValidTimeZone(tz) ? tz : null;
     if (this.variant === 'dual') return valid ?? 'UTC';
     return this.variant === 'classic' ? valid : null;
+  }
+
+  /** Dual face: the name on the home dial. */
+  get homeLabel() {
+    return this.getAttribute('label') || cityName(this.timeZone ?? deviceZone());
   }
 
   /** Dual face: the side showing local time. */
@@ -402,7 +409,7 @@ class BezelClock extends BezelElement {
         const size = Math.min(2.55, (2.55 * 13) / Math.max(13, text.length + 3));
         return `<text class="label ${cls}" x="${c.x + dx}" y="${c.y + 13}" font-size="${size.toFixed(2)}" text-anchor="middle">${esc(text)}${cls === 'away' ? '<tspan class="off" dx="0.9"></tspan>' : ''}</text>`;
       };
-      labels = label(home, cityName(this.timeZone ?? deviceZone()), 'home', 0)
+      labels = label(home, this.homeLabel, 'home', 0)
         + label(away, this.getAttribute('second-label') || cityName(this.secondZone), 'away', awaySide === 'left' ? -6 : 6);
     }
 
@@ -499,7 +506,7 @@ class BezelClock extends BezelElement {
       new Intl.DateTimeFormat(this.locale, { hour: 'numeric', minute: '2-digit', hour12: this.hour12, timeZone: tz }).format(z.ms);
     const zone = this.secondZone;
     const second = zone ? `, ${fmt(zone)} in ${this.getAttribute('second-label') || cityName(zone)}` : '';
-    const home = this.variant === 'dual' ? ` in ${cityName(this.timeZone ?? deviceZone())}` : '';
+    const home = this.variant === 'dual' ? ` in ${this.homeLabel}` : '';
     return `Clock showing ${fmt(this.timeZone)}${home}${second}`;
   }
 }

@@ -324,6 +324,20 @@ test('dual clock: home side, a second zone, hidden labels and hidden seconds', a
   el.remove();
 });
 
+test('dual clock: label and second-label name cities that share a zone', async () => {
+  const el = mount('<bezel-clock variant="dual" timezone="Europe/Berlin" label="Munich" second-timezone="America/Sao_Paulo" second-label="São Paulo"></bezel-clock>');
+  await flush();
+  const root = el.shadowRoot;
+  assert.equal(root.querySelector('.label.home').textContent, 'MUNICH');
+  assert.match(root.querySelector('.label.away').textContent, /^SÃO PAULO/);
+  assert.match(el.getAttribute('aria-label'), / in Munich, .+ in São Paulo$/);
+  // Without a label, the home dial falls back to the zone's own city.
+  el.removeAttribute('label');
+  await flush();
+  assert.equal(root.querySelector('.label.home').textContent, 'BERLIN');
+  el.remove();
+});
+
 test('dual clock: zone colour, onyx theme and a frame of your choice', async () => {
   const el = mount('<bezel-clock variant="dual" theme="onyx" frame="device" style="--bezel-zone: #ff0066"></bezel-clock>');
   await flush();

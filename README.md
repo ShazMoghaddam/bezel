@@ -37,7 +37,7 @@ Bezel is a set of free, open-source web components: five tiles drawn entirely in
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.1/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.2.0/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief" theme="ember"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>
@@ -72,6 +72,8 @@ The [Studio](https://shazmoghaddam.github.io/bezel/site/) is the easiest way to 
 - **Options:** what the tile shows, such as the date, a second time zone, the weather location or a calendar link
 - **Time:** time zone, 12 or 24 hours, and language, wherever they change something
 
+Time zones are picked by city. Search for a city or a country, such as Munich or Japan, and the list shows each place's local time and current offset. It covers about 300 well-known cities plus every zone your browser knows, and works with the keyboard and screen readers.
+
 The Studio only offers settings that have a visible effect on the tile you're editing. When you're done, **Get the code** gives you the HTML, a desk display link, or an entry for the Mac widget. **Share** copies a link that opens your exact design in the Studio. The page address also updates as you work, so you can bookmark a design or come back to it later.
 
 ## The tiles
@@ -94,12 +96,15 @@ An analog clock with four faces: **Numerals**, with four huge overlapping number
 | `lume`            | Classic and Dual: `green`, `blue`              | off                |
 | `home`            | Dual only: `left`, `right`                     | `right`            |
 | `hide-labels`     | Dual only: boolean, hides the city names       | off                |
+| `label`           | Dual only: name on the home dial               | the city's name    |
 
 **Hands.** `modern` is the slim original. `lollipop` has tapered batons, a pivot cap and a seconds hand that ends in a round dot. `slender` has fine needles that run just past the pivot, and a hairline seconds hand with a small round counterweight. All three work on every dial, including the one on `<bezel-glance>`.
 
 **Second time zone.** On the Classic face, a second time zone replaces the 6 with a small dial showing the city and the time difference, for example "NEW YORK −5h". Roman numerals write four as IIII, as most clock dials do.
 
 **Dual.** A 3:2 tile with round ends and two dials that overlap in the middle: Roman numerals on the left, Arabic on the right (`numerals="persian"` switches the right dial to Persian digits). One dial shows local time and is drawn in full; the other shows `second-timezone`, or UTC if you don't set one, and its dots stop where it tucks behind the first. `home` picks which side is local. Each dial carries a small city name, with the time difference on the second, and only the local dial has a seconds hand. The second zone's hour hand takes its own colour, `--bezel-zone`. Dual starts in the `porcelain` theme and the `metal` frame; `theme="onyx"` is its dark partner.
+
+**City names.** Each dial is named after its time zone, so `Europe/Berlin` reads BERLIN. For a city that shares a zone, name it yourself: `timezone="Europe/Berlin" label="Munich"` on the home dial, or `second-label` on the second. The Studio does this for you when you pick a city.
 
 ```html
 <bezel-clock variant="dual" second-timezone="America/New_York"></bezel-clock>
