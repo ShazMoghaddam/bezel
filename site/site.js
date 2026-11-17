@@ -1,7 +1,9 @@
 // Bezel demo site: showcase, studio, code cards and desk mode.
 // The tiles themselves come from the library; this file only drives the page.
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.1.1/dist/bezel.min.js';
+import { zoneField, bindZonePickers, labelFor } from './zone-picker.js';
+
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.2.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 // [CSS value, label, Google Fonts family spec]. The copied code includes the line that loads the chosen face.
@@ -16,77 +18,10 @@ const fontLink = (value) => {
   const spec = FONTS.find(([v]) => v === value)?.[2];
   return spec ? `https://fonts.googleapis.com/css2?family=${spec}&display=swap` : '';
 };
-// Time zones: every zone the browser knows, named by its city ("Seoul, Asia · GMT+9").
-// As on most sites, a few cities share a bigger neighbour's zone (Calgary runs on Edmonton time).
-// Browsers without Intl.supportedValuesOf get the short list the Studio used to have.
-const FALLBACK_ZONES = ['Europe/London', 'Europe/Paris', 'Europe/Berlin', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'America/Sao_Paulo', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland'];
-// Chrome and Node still list some zones by their old names. Show the current name where the browser accepts it.
-const RENAMED_ZONES = { 'Asia/Calcutta': 'Asia/Kolkata', 'Asia/Saigon': 'Asia/Ho_Chi_Minh', 'Asia/Katmandu': 'Asia/Kathmandu', 'Asia/Rangoon': 'Asia/Yangon', 'Europe/Kiev': 'Europe/Kyiv', 'America/Godthab': 'America/Nuuk', 'Atlantic/Faeroe': 'Atlantic/Faroe', 'Asia/Ulan_Bator': 'Asia/Ulaanbaatar' };
-const REGION_NAMES = { America: 'Americas', Indian: 'Indian Ocean' };
-const validZone = (id) => {
-  try {
-    new Intl.DateTimeFormat('en', { timeZone: id });
-    return true;
-  } catch {
-    return false;
-  }
-};
-const zoneCity = (id) => id.split('/').pop().replace(/_/g, ' ');
-/** "GMT+9" for a zone right now, or '' where the browser can't say. */
-const zoneOffset = (id) => {
-  try {
-    const part = new Intl.DateTimeFormat('en', { timeZone: id, timeZoneName: 'shortOffset' }).formatToParts(Date.now()).find((p) => p.type === 'timeZoneName');
-    return part?.value ?? '';
-  } catch {
-    return '';
-  }
-};
-let zoneCache;
-/** Every zone as { id, city, text }, sorted by city. Built once, on first use. */
-function zoneList() {
-  if (zoneCache) return zoneCache;
-  let ids = FALLBACK_ZONES;
-  try {
-    if (typeof Intl.supportedValuesOf === 'function') ids = Intl.supportedValuesOf('timeZone');
-  } catch {
-    // Keep the short list.
-  }
-  const seen = new Set();
-  zoneCache = ids
-    .map((id) => (RENAMED_ZONES[id] && validZone(RENAMED_ZONES[id]) ? RENAMED_ZONES[id] : id))
-    .filter((id) => id.includes('/') && !id.startsWith('Etc/') && !seen.has(id) && seen.add(id))
-    .map((id) => {
-      const parts = id.split('/');
-      // Three-part names carry a state or country in the middle: "Knox, Indiana", "Salta, Argentina".
-      const region = (parts.length > 2 ? parts[1] : REGION_NAMES[parts[0]] ?? parts[0]).replace(/_/g, ' ');
-      const offset = zoneOffset(id);
-      const city = zoneCity(id);
-      return { id, city, text: `${city}, ${region}${offset ? ` · ${offset}` : ''}` };
-    })
-    .sort((a, b) => a.city.localeCompare(b.city, 'en'));
-  return zoneCache;
-}
-let zoneOptionsCache;
-const zoneOptions = () => (zoneOptionsCache ??= zoneList().map((z) => `<option value="${esc(z.text)}"></option>`).join(''));
-/** The picker's text for a stored zone id. */
-function zoneText(id) {
-  if (!id) return '';
-  const target = RENAMED_ZONES[id] ?? id;
-  return zoneList().find((z) => z.id === id || z.id === target)?.text ?? zoneCity(id);
-}
-/** The zone id for what was typed: a listed entry, a city name or a zone id. null when nothing matches. */
-function zoneFromText(raw) {
-  const text = raw.trim().toLowerCase();
-  if (!text) return '';
-  const list = zoneList();
-  const byText = list.find((z) => z.text.toLowerCase() === text);
-  if (byText) return byText.id;
-  const city = text.split(',')[0].trim();
-  const byCity = list.find((z) => z.city.toLowerCase() === city);
-  if (byCity) return byCity.id;
-  const id = raw.trim().replace(/ /g, '_');
-  return id.includes('/') && validZone(id) ? id : null;
-}
+// Time zones: the picker lives in zone-picker.js. A clock remembers the city picked, so a dial on
+// Europe/Berlin can read MUNICH: the home dial through `label`, the second dial through `second-label`.
+const LABEL_KEYS = { timezone: 'label', 'second-timezone': 'second-label' };
+
 const LOCALES = [
   ['', 'This device'],
   ['en-GB', 'English (UK)'],
@@ -116,7 +51,7 @@ const CLOCK_DEFAULTS = { numerals: 'sage', relief: 'blush', classic: 'porcelain'
 const defaultFrame = (type, attrs = {}) => (type === 'poster' ? 'none' : type === 'clock' && attrs.variant === 'dual' ? 'metal' : 'device');
 const isDual = (type, attrs) => type === 'clock' && attrs.variant === 'dual';
 
-const timeZone = { type: 'zone', key: 'timezone', label: 'Time zone', empty: 'This device', hint: 'Type a city, like Seoul or Johannesburg. Clear it to follow this device.' };
+const timeZone = { type: 'zone', key: 'timezone', label: 'Time zone', empty: 'This device', hint: 'Search a city or country, like Munich or Japan. Clear it to follow this device.' };
 const language = { type: 'select', key: 'locale', label: 'Language', options: LOCALES };
 /** The 12 or 24 hour choice, for tiles that show a digital time. `when` says when that time is on screen. */
 const hours = (when, note = 'Auto follows the language setting.') => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when, note });
@@ -162,8 +97,8 @@ const TYPES = {
     options: [
       // The Relief face has no date, and only the Classic face has room for a second dial.
       { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' && a.variant !== 'dual' },
-      { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'None', hint: 'A small dial for another city, in place of the 6. Type a city, or clear it for none.', when: (a) => a.variant === 'classic' },
-      { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'UTC', hint: 'The time on the second dial. Type a city, or clear it for UTC.', when: (a) => a.variant === 'dual' },
+      { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'None', hint: 'A small dial for another city, in place of the 6. Search a city or country, or clear it for none.', when: (a) => a.variant === 'classic' },
+      { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'UTC', hint: 'The time on the second dial. Search a city or country, or clear it for UTC.', when: (a) => a.variant === 'dual' },
       { type: 'seg', key: 'home', label: 'Local time on', options: [['', 'Right dial'], ['left', 'Left dial']], hint: 'The home dial is drawn in full; the other tucks behind it.', when: (a) => a.variant === 'dual' },
       { type: 'toggle', key: 'hide-labels', label: 'City names', invert: true, when: (a) => a.variant === 'dual' },
     ],
@@ -461,8 +396,8 @@ function control(c, cfg) {
         .map(([v, l]) => `<option value="${esc(v)}" ${String(value) === v ? 'selected' : ''}>${esc(l)}</option>`)
         .join('')}</select>${hint}</div>`;
     case 'zone':
-      // A text box with suggestions: type part of a city and pick it, as on most sites.
-      return `<div class="field"><label for="${id}">${esc(c.label)}</label><input type="text" id="${id}" data-zone="${c.key}" list="${id}-list" value="${esc(zoneText(value))}" placeholder="${esc(c.empty)}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"${described}><datalist id="${id}-list">${zoneOptions()}</datalist>${hint}</div>`;
+      // A searchable city list, styled to match the Studio (see zone-picker.js).
+      return zoneField({ id, key: c.key, label: c.label, empty: c.empty, hint: c.hint, value, place: cfg.attrs[LABEL_KEYS[c.key]] });
     case 'month':
       return `<div class="field"><label for="${id}">${esc(c.label)}</label><input type="month" id="${id}" data-select="${c.key}" value="${esc(value)}"${described}>${hint}</div>`;
     case 'text':
@@ -626,6 +561,13 @@ function updatePreview(rebuild) {
   save();
 }
 
+/** City names the Studio keeps for its own picker but the tile doesn't print: left out of copied code. */
+function dropUnusedLabels(type, attrs) {
+  if (!isDual(type, attrs)) delete attrs.label;
+  if (type !== 'clock' || !attrs['second-timezone']) delete attrs['second-label'];
+  return attrs;
+}
+
 function snippetParts() {
   const type = state.current;
   const t = TYPES[type];
@@ -633,6 +575,7 @@ function snippetParts() {
   const attrs = { ...cfg.attrs };
   if (attrs.frame === defaultFrame(type, attrs)) delete attrs.frame;
   if (attrs.hands === 'modern') delete attrs.hands;
+  dropUnusedLabels(type, attrs);
   const vars = {};
   for (const k of VAR_KEYS) if (k !== 'radius' && k !== 'font' && cfg.vars[k]) vars[k] = cfg.vars[k];
   if (cfg.vars.radius != null) vars.radius = cfg.vars.radius;
@@ -689,7 +632,7 @@ function displayURL() {
   const type = state.current;
   const cfg = state.tiles[type];
   const params = new URLSearchParams({ tile: type });
-  for (const [k, v] of Object.entries(cfg.attrs)) if (v !== '' && v != null && v !== false) params.set(k, v === true ? '' : v);
+  for (const [k, v] of Object.entries(dropUnusedLabels(type, { ...cfg.attrs }))) if (v !== '' && v != null && v !== false) params.set(k, v === true ? '' : v);
   for (const [k, v] of Object.entries(cfg.vars)) if (v !== '' && v != null) params.set(`--${k}`, v);
   return new URL(`display.html?${params}`, location.href).href;
 }
@@ -749,6 +692,24 @@ function bindStudio() {
 
   const panel = $('[data-panel]');
 
+  bindZonePickers(panel, {
+    current: (key) => {
+      const attrs = state.tiles[state.current].attrs;
+      return { id: attrs[key] || '', label: attrs[LABEL_KEYS[key]] || '' };
+    },
+    onPick: (key, place) => {
+      const attrs = state.tiles[state.current].attrs;
+      const labelKey = LABEL_KEYS[key];
+      attrs[key] = place ? place.id : '';
+      // Only clocks print city names. Other tiles still remember the city, so the box shows what was picked.
+      const label = labelFor(place);
+      if (label) attrs[labelKey] = label;
+      else delete attrs[labelKey];
+      updatePreview();
+    },
+    onMiss: (text) => note(`No city found for "${text}". Try a nearby big city or the country's name.`),
+  });
+
   const setHands = (value) => {
     const cfg = state.tiles[state.current];
     // Only the hands change; theme, colours and every other setting stay as they are.
@@ -773,6 +734,7 @@ function bindStudio() {
         // Drop settings the new face doesn't use, so they don't end up in code where they do nothing.
         if (value !== 'classic' && value !== 'dual') {
           delete cfg.attrs['second-timezone'];
+          delete cfg.attrs['second-label'];
           delete cfg.attrs.lume;
         }
         if (value !== 'dual') {
@@ -894,19 +856,7 @@ function bindStudio() {
       cfg.vars.radius = Number(t.value);
       panel.querySelector('[data-out="radius"]').textContent = t.value;
       updatePreview();
-    } else if (t.matches('[data-zone]')) {
-      // Picking a suggestion fills in its full text, so apply it straight away. Partial typing waits for change.
-      const pick = zoneList().find((z) => z.text === t.value);
-      if (pick && cfg.attrs[t.dataset.zone] !== pick.id) {
-        cfg.attrs[t.dataset.zone] = pick.id;
-        updatePreview();
-      }
     }
-  });
-
-  // Select the current city on focus, so typing replaces it and the suggestions open unfiltered.
-  panel.addEventListener('focusin', (e) => {
-    if (e.target.matches('[data-zone]')) requestAnimationFrame(() => e.target.select());
   });
 
   panel.addEventListener('change', (e) => {
@@ -944,17 +894,6 @@ function bindStudio() {
         renderPanel();
         panel.querySelector('[data-select="locale"]')?.focus();
       }
-    } else if (t.matches('[data-zone]')) {
-      const key = t.dataset.zone;
-      const id = zoneFromText(t.value);
-      if (id === null) {
-        note(`No time zone found for "${t.value.trim()}". Try the nearest big city.`);
-        t.value = zoneText(cfg.attrs[key]);
-        return;
-      }
-      cfg.attrs[key] = id;
-      t.value = zoneText(id);
-      updatePreview();
     } else if (t.matches('[data-font]')) {
       cfg.vars.font = t.value;
       updatePreview();
