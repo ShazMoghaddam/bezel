@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Site only. The component and the npm package are unchanged.
+
+- **Desk displays stay awake.** The display page and desk mode now ask again for the screen to stay on if the browser or the computer lets go (after sleep, on low battery), checking every 20 seconds. Before, they only asked when the page opened or the tab came back, so the screensaver could take over on a long run. Desk mode also asks again after you switch tabs and come back, and still lets go when you close it.
+
 ## 2.2.0 (2026-11-17)
 
 - **City labels:** a new `label` attribute names the home dial on the Dual face, to match `second-label` on the second dial. Cities that share a time zone can now show their own name, for example `timezone="Europe/Berlin" label="Munich"`. Without it, the dial is named after its zone as before.

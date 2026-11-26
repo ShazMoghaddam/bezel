@@ -981,8 +981,28 @@ function bindWays() {
 // ---- Desk mode ---------------------------------------------------------
 
 let wakeLock = null;
+let askingForWake = false;
 let idleTimer = 0;
 let shiftTimer = 0;
+let awakeTimer = 0;
+
+// Keep the screen awake while desk mode is open. The browser lets go when the
+// tab is hidden, and the system can drop the lock on its own (after sleep, on
+// low battery), so ask again on return and every 20 seconds.
+async function keepDeskAwake() {
+  if (wakeLock || askingForWake || !navigator.wakeLock) return;
+  if ($('[data-desk-overlay]').hidden || document.visibilityState !== 'visible') return;
+  askingForWake = true;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+    if ($('[data-desk-overlay]').hidden) await wakeLock.release(); // closed while asking
+  } catch {
+    wakeLock = null;
+  }
+  askingForWake = false;
+}
+document.addEventListener('visibilitychange', keepDeskAwake);
 
 async function openDesk() {
   const overlay = $('[data-desk-overlay]');
@@ -999,9 +1019,8 @@ async function openDesk() {
   try {
     await overlay.requestFullscreen?.();
   } catch {}
-  try {
-    wakeLock = await navigator.wakeLock?.request('screen');
-  } catch {}
+  keepDeskAwake();
+  awakeTimer = setInterval(keepDeskAwake, 20_000);
 
   const wake = () => {
     overlay.removeAttribute('data-idle');
@@ -1027,6 +1046,7 @@ async function closeDesk() {
   document.body.style.overflow = '';
   $('[data-desk-stage]').replaceChildren();
   clearInterval(shiftTimer);
+  clearInterval(awakeTimer);
   clearTimeout(idleTimer);
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
