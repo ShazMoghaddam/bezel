@@ -7,5 +7,6 @@
  *   update(el, z, first)
  *   tickRate(el)       optional; otherwise the clock's own (smooth or ticking seconds)
  */
+import { scatter } from './scatter.js';
 
-export const FACES = {};
+export const FACES = { scatter };
