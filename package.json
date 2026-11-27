@@ -5,6 +5,8 @@
   "type": "module",
   "main": "dist/bezel.js",
   "module": "dist/bezel.js",
+  "unpkg": "dist/bezel.min.js",
+  "jsdelivr": "dist/bezel.min.js",
   "exports": {
     ".": "./dist/bezel.js",
     "./src/*": "./src/*"
@@ -18,7 +20,8 @@
     "test": "node --test test/*.test.js",
     "serve": "python3 -m http.server 4173",
     "check": "npm run build && npm test && npm run size",
-    "size": "node scripts/size.mjs"
+    "size": "node scripts/size.mjs",
+    "prepublishOnly": "npm run check"
   },
   "keywords": [
     "web-components",
