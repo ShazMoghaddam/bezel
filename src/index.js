@@ -16,5 +16,6 @@ export * as time from './core/time.js';
 export * as calendar from './core/calendar.js';
 export * as weather from './core/weather.js';
 export * as ics from './core/ics.js';
+export * as palettes from './core/palettes.js';
 
 export const version = '2.2.0';

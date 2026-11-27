@@ -2,13 +2,25 @@ import { BezelElement, define, FRAMES } from '../core/element.js';
 import { handAngles, names, zoned, isValidTimeZone } from '../core/time.js';
 import { esc } from '../core/frame.js';
 import { handStyle, styledHands, baton, HANDS_CSS } from '../core/hands.js';
+import { FACES } from '../faces/index.js';
+import { numeral } from '../faces/shared.js';
+
+export { numeral };
 
 /**
  * <bezel-clock>
  *
  * Attributes
- *   variant          numerals | relief | classic | dual   (default numerals)
+ *   variant          numerals | relief | classic | dual | scatter | dots | circles | square | perimeter | grammar
+ *                    (default numerals; the last six live in src/faces/)
  *   numerals         western | roman | persian      (default western)
+ *                    dots and circles also take none (dots: none by default)
+ *   palette          dots, circles, scatter, grammar: vibrant | neon | pastel | subtle | spring | summer | autumn | winter
+ *   colors           dots, circles, scatter, grammar: your own colours, comma separated
+ *   seed             scatter and grammar: a whole number that sets the arrangement
+ *   color-by         grammar: word | pos
+ *   lines            grammar: any of time, date, week, day
+ *   hide-tags        grammar: just the words, no part-of-speech tags
  *   theme            sage | cobalt | ember | graphite | blush | stone | midnight | porcelain | onyx
  *   dark-theme       a theme for dark mode (see README)
  *   second-timezone  classic: a small second dial for another city, e.g. "America/New_York"
@@ -28,21 +40,13 @@ import { handStyle, styledHands, baton, HANDS_CSS } from '../core/hands.js';
  * left, Arabic on the right. It defaults to the metal frame.
  */
 
-const VARIANTS = new Set(['numerals', 'relief', 'classic', 'dual']);
+const VARIANTS = new Set(['numerals', 'relief', 'classic', 'dual', ...Object.keys(FACES)]);
 const SCRIPTS = new Set(['western', 'roman', 'persian']);
-const DEFAULT_THEME = { numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain' };
+const DEFAULT_THEME = {
+  numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain',
+  ...Object.fromEntries(Object.entries(FACES).map(([name, face]) => [name, face.theme])),
+};
 const LUME = new Set(['green', 'blue']);
-
-// Clocks traditionally write four as IIII, which balances VIII on the other side of the dial.
-const ROMAN = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
-
-/** The numeral for hour `h` (1 to 12) in a script. */
-export function numeral(h, script = 'western') {
-  if (script === 'roman') return ROMAN[h % 12];
-  if (script === 'persian') return String(h).replace(/\d/g, (d) => PERSIAN_DIGITS[d]);
-  return String(h);
-}
 
 /** Hours between two zones at a moment, as a short label: "+5h", "−4h", "+5:30", or "" when equal. */
 function zoneOffset(ms, from, to) {
@@ -128,7 +132,8 @@ const BIG = {
 };
 
 class BezelClock extends BezelElement {
-  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'label', 'hands', 'home', 'hide-labels', 'lume'];
+  static attributes = ['variant', 'numerals', 'hide-seconds', 'hide-date', 'sweep', 'second-timezone', 'second-label', 'label', 'hands', 'home', 'hide-labels', 'lume',
+    'palette', 'colors', 'seed', 'color-by', 'lines', 'hide-tags'];
 
   // `zone` colours the second time zone's hour hand on the dual face.
   // Dual styles: a landscape case whose round ends share their centres with the two dials.
@@ -143,6 +148,10 @@ class BezelClock extends BezelElement {
     midnight: { surface: '#1B1F27', ink: '#E9E3D6', hand: '#E9E3D6', accent: '#FFB547', zone: '#FFB547' },
     porcelain: { surface: '#F4F4F2', ink: '#17181A', hand: '#17181A', accent: '#FF5A1F', zone: '#2440A8' },
     onyx: { surface: '#161719', ink: '#ECECEA', hand: '#D3D6DA', accent: '#FF7A45', zone: '#8EA4FF' },
+    // Added with the 2.3 faces, and usable on any of them.
+    moss: { surface: '#5E6E58', ink: '#FFFFFF', hand: '#FFFFFF', accent: '#DFFF4F', zone: '#DFFF4F' },
+    rose: { surface: '#C24D5E', ink: '#160709', hand: '#160709', accent: '#FFF4EF', zone: '#FFF4EF' },
+    phosphor: { surface: '#060707', ink: '#9DB8AE', hand: '#9DB8AE', accent: '#E6F06A', zone: '#E6F06A' },
   };
 
   static styles = /* css */ `
@@ -202,6 +211,8 @@ class BezelClock extends BezelElement {
     :host([lume="blue"]) { --_glow: var(--bezel-lume, #4AA6FF); }
     .lume .numeral { fill: color-mix(in srgb, var(--_ink) 70%, var(--_glow)); filter: url(#lume); }
     .lume-glow { flood-color: var(--_glow); flood-opacity: .9; }
+
+    ${Object.values(FACES).map((face) => face.styles).join('')}
 
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
@@ -269,13 +280,22 @@ class BezelClock extends BezelElement {
     return !this.flag('hide-seconds');
   }
 
+  /** Dots and Circles take numerals="none"; returns the script, "none", or `fallback`. */
+  numeralsOrNone(fallback) {
+    const s = this.getAttribute('numerals');
+    return s === 'none' || SCRIPTS.has(s) ? s : fallback;
+  }
+
   get tickRate() {
+    const face = FACES[this.variant];
+    if (face?.tickRate) return face.tickRate(this);
     if (!this.showSeconds) return 'second';
     return this.getAttribute('sweep') === 'tick' ? 'second' : 'frame';
   }
 
-  template() {
+  template(z) {
     const v = this.variant;
+    if (FACES[v]) return FACES[v].template(this, z);
     if (v === 'dual') return this.#dual();
     const script = this.script;
     let dial = '';
@@ -433,6 +453,11 @@ class BezelClock extends BezelElement {
   }
 
   update(z, first) {
+    const face = FACES[this.variant];
+    if (face) {
+      face.update(this, z, first);
+      return;
+    }
     if (this.variant === 'dual') {
       this.#updateDual(z, first);
       return;
