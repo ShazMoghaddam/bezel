@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **On npm:** `npm install bezel-tiles`. Each GitHub release now publishes to npm by itself, with a provenance statement that links the package to the exact build. The package is on jsDelivr and unpkg too.
+
 ## 2.3.0 (2026-11-27)
 
 Six new clock faces, and colour palettes to go with them.

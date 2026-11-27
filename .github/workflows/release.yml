@@ -1,0 +1,47 @@
+name: Release
+
+# Publishes bezel-tiles to npm when a GitHub release is published. No npm token or
+# login is needed: npm trusts this workflow directly (trusted publishing, using
+# OpenID Connect) and adds a provenance statement linking the package to this build.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  # Lets the job ask GitHub for a short-lived identity token, which npm checks
+  # against the trusted publisher set up in the package's npm settings.
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # A release event checks out the release's tag.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # Node 24 comes with npm 11, which trusted publishing needs (11.5.1 or later).
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # No cache in release builds: every file is fetched fresh.
+          package-manager-cache: false
+
+      - name: Check the tag matches the version
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The release tag is $GITHUB_REF_NAME but package.json says $version. Bump the version and tag again."
+            exit 1
+          fi
+
+      - run: npm ci
+      # `npm publish` runs `prepublishOnly` first: the build, every test and the size budget.
+      - run: npm publish

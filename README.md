@@ -3,6 +3,7 @@
 **Clocks, calendars and weather, sharp on every screen.**
 
 [![CI](https://github.com/ShazMoghaddam/bezel/actions/workflows/ci.yml/badge.svg)](https://github.com/ShazMoghaddam/bezel/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/bezel-tiles?color=4C8DFF)](https://www.npmjs.com/package/bezel-tiles)
 [![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ShazMoghaddam/badge.svg)](https://hub.xerj.org/contributors/ShazMoghaddam)
 
 Bezel is a set of free, open-source web components: five tiles drawn entirely in vectors, so they stay crisp from a 120 px widget to a 4K desk display. Design one in the Studio, paste one line of HTML into any site, turn a spare iPad into a desk clock, or put tiles on your Mac desktop.
@@ -51,16 +52,18 @@ That's all. Tiles are 320 px wide by default; set `--bezel-size` to change that:
 
 Prefer a classic script tag? `dist/bezel.iife.js` registers the same elements and exposes a `Bezel` global.
 
-With npm, straight from GitHub:
+With npm:
 
 ```sh
-npm install github:ShazMoghaddam/bezel
+npm install bezel-tiles
 ```
 
 ```js
 import 'bezel-tiles';                        // registers every element
 import { time, weather } from 'bezel-tiles'; // helpers, if you want them
 ```
+
+The package is also on the npm CDNs, so `https://cdn.jsdelivr.net/npm/bezel-tiles@2` or `https://unpkg.com/bezel-tiles@2` work in a script tag too.
 
 ## The Studio
 
@@ -358,6 +361,8 @@ test/          node:test suites
 ```
 
 Each tile extends `BezelElement`, which handles the frame, colours, shadow DOM, the shared ticker and visibility. A new tile needs a `template()` that returns its markup and an `update()` that moves whatever changes each tick. The bundle has a 35 kB gzip budget, checked in CI. A new clock face is a small object in `src/faces/` (`template`, `update` and its styles) added to `src/faces/index.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Releasing.** Bump the version in `package.json` and `src/index.js`, merge, then publish a GitHub release tagged to match (for example `v2.4.0`). The Release workflow checks the tag, runs the full check and publishes to npm.
 
 ## Credits
 
