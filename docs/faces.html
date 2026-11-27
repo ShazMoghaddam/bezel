@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bezel 2.3 clock faces</title>
+<!-- Used to render docs/bezel-faces.png: python3 scripts/shot.py http://localhost:4173/docs/faces.html docs/bezel-faces.png 1600 1100 -->
+<style>
+  /* The six 2.3 faces, each in a different palette or theme, three to a row. */
+  body { margin: 0; padding: 64px; background: radial-gradient(120% 100% at 50% 0%, #F2F3F5, #DADDE2); display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px 56px; }
+  body > * { --bezel-size: 100%; width: 100%; --bezel-font: "Geist", sans-serif; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=DM+Serif+Display:ital@0;1&family=Space+Mono&display=swap">
+<script type="module" src="../src/index.js"></script>
+<bezel-clock variant="circles" timezone="Europe/London"></bezel-clock>
+<bezel-clock variant="grammar" seed="3" timezone="Europe/London"></bezel-clock>
+<bezel-clock variant="scatter" palette="summer" seed="11" frame="metal" timezone="Europe/London" hour-cycle="12"></bezel-clock>
+<bezel-clock variant="square" hands="slender" timezone="Europe/London"></bezel-clock>
+<bezel-clock variant="dots" numerals="western" palette="autumn" hands="lollipop" timezone="Europe/London"></bezel-clock>
+<bezel-clock variant="perimeter" frame="metal" timezone="Europe/London" locale="en-GB"></bezel-clock>

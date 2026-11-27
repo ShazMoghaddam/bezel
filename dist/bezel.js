@@ -1,4 +1,4 @@
-/*! Bezel v2.2.0 | MIT | github.com/ShazMoghaddam/bezel */
+/*! Bezel v2.3.0 | MIT | github.com/ShazMoghaddam/bezel */
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -215,9 +215,9 @@ var offsetCache = /* @__PURE__ */ new Map();
 var partsFormatters = /* @__PURE__ */ new Map();
 var warned = /* @__PURE__ */ new Set();
 function partsFormatter(timeZone) {
-  let f2 = partsFormatters.get(timeZone);
-  if (!f2) {
-    f2 = new Intl.DateTimeFormat("en-US", {
+  let f3 = partsFormatters.get(timeZone);
+  if (!f3) {
+    f3 = new Intl.DateTimeFormat("en-US", {
       timeZone,
       hourCycle: "h23",
       year: "numeric",
@@ -227,9 +227,9 @@ function partsFormatter(timeZone) {
       minute: "numeric",
       second: "numeric"
     });
-    partsFormatters.set(timeZone, f2);
+    partsFormatters.set(timeZone, f3);
   }
-  return f2;
+  return f3;
 }
 function isValidTimeZone(timeZone) {
   if (!timeZone) return false;
@@ -431,8 +431,8 @@ var BezelElement = class extends HTMLElement {
   }
   // ---- Shared settings -------------------------------------------------
   get frame() {
-    const f2 = this.getAttribute("frame");
-    return FRAMES.has(f2) ? f2 : this.constructor.defaultFrame;
+    const f3 = this.getAttribute("frame");
+    return FRAMES.has(f3) ? f3 : this.constructor.defaultFrame;
   }
   get timeZone() {
     const tz = this.getAttribute("timezone");
@@ -637,11 +637,52 @@ var HANDS_CSS = (
 `
 );
 
-// src/tiles/clock.js
-var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic", "dual"]);
-var SCRIPTS = /* @__PURE__ */ new Set(["western", "roman", "persian"]);
-var DEFAULT_THEME = { numerals: "sage", relief: "blush", classic: "porcelain", dual: "porcelain" };
-var LUME = /* @__PURE__ */ new Set(["green", "blue"]);
+// src/core/palettes.js
+var palettes_exports = {};
+__export(palettes_exports, {
+  PALETTES: () => PALETTES,
+  PALETTE_NAMES: () => PALETTE_NAMES,
+  inkFor: () => inkFor,
+  parseColors: () => parseColors,
+  tileColors: () => tileColors
+});
+var PALETTES = {
+  vibrant: ["#FF3B30", "#FF7A00", "#FFC300", "#A6E22E", "#22C55E", "#00C2A8", "#00B4FF", "#2F6BFF", "#6C4BFF", "#B44CFF", "#FF3DA8", "#FF6F61"],
+  neon: ["#FF1744", "#FF6D00", "#FFEA00", "#C6FF00", "#39FF14", "#1DE9B6", "#00E5FF", "#2979FF", "#651FFF", "#D500F9", "#FF00A8", "#FFAB00"],
+  pastel: ["#FFB3BA", "#FFCBA4", "#FFF3B0", "#DFF5B5", "#B9F2C8", "#B4EAE2", "#B3E5FC", "#B8C9FF", "#C9BFFF", "#E2C2FF", "#FFC2E2", "#F5D6C6"],
+  subtle: ["#B5615A", "#C0703F", "#C9A657", "#9BA65A", "#6E9B7B", "#5E9A96", "#6A93AE", "#5C6F9E", "#7D6FA3", "#A3769A", "#C08A8A", "#8C6A55"],
+  spring: ["#FF8FAB", "#FFB86B", "#FFE66D", "#C5E86C", "#7BD389", "#5ED1B6", "#7FD6F2", "#8FB3FF", "#B19CFF", "#E09CFF", "#FF9CD6", "#F7A072"],
+  summer: ["#FF4D4D", "#FF8C42", "#FFD23F", "#B5E61D", "#3DDC84", "#1FC8C0", "#29B6F6", "#1E88E5", "#7C4DFF", "#E040FB", "#FF5CA8", "#FFA987"],
+  autumn: ["#9E2A2B", "#C1440E", "#D96C1A", "#E9A23B", "#C9B037", "#8A9A3B", "#5B7F3A", "#2F6F68", "#4A5F8A", "#6B4C8A", "#8C4A3C", "#B07A4F"],
+  winter: ["#E63946", "#F4A6A6", "#FFE8A3", "#D7E8BA", "#2E7D5B", "#7FC8C2", "#A8DADC", "#6FA8DC", "#2F4B7C", "#8E7CC3", "#C9B6E4", "#EDEFF2"]
+};
+var PALETTE_NAMES = Object.keys(PALETTES);
+var COLOUR = /^(#[0-9a-f]{3,8}|[a-z]{3,20}|(rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\([\d\s.,%/+-]+\))$/i;
+function parseColors(value) {
+  return String(value ?? "").split(/,(?![^(]*\))/).map((c) => c.trim()).filter((c) => COLOUR.test(c));
+}
+function tileColors(el, fallback = "vibrant") {
+  const own = parseColors(el.getAttribute("colors"));
+  if (own.length) return own;
+  const name = el.getAttribute("palette");
+  if (PALETTES[name]) return PALETTES[name];
+  return fallback ? PALETTES[fallback] : null;
+}
+function inkFor(color, fallback = null) {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})([0-9a-f]{2})?$/i.exec(color ?? "");
+  if (!m) return fallback;
+  let hex = m[1];
+  if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
+  const n = parseInt(hex, 16);
+  const lin = (v) => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255);
+  return L > 0.3 ? "#111111" : "#FFFFFF";
+}
+
+// src/faces/shared.js
 var ROMAN = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
 var PERSIAN_DIGITS = "\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9";
 function numeral(h, script = "western") {
@@ -649,6 +690,505 @@ function numeral(h, script = "western") {
   if (script === "persian") return String(h).replace(/\d/g, (d) => PERSIAN_DIGITS[d]);
   return String(h);
 }
+function digits(n, script = "western") {
+  return script === "persian" ? String(n).replace(/\d/g, (d) => PERSIAN_DIGITS[d]) : String(n);
+}
+var f2 = (n) => Number(n.toFixed(2));
+function seeded(seed) {
+  let s = Number.isFinite(seed) ? seed | 0 : 7;
+  return () => {
+    s = s + 1831565813 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function seedOf(el) {
+  const n = parseInt(el.getAttribute("seed"), 10);
+  return Number.isFinite(n) ? n : 7;
+}
+function squarePoint(t, cx, cy, s) {
+  let d = (t % 1 + 1) % 1 * 8 * s;
+  if (d < s) return { x: cx + d, y: cy - s };
+  d -= s;
+  if (d < 2 * s) return { x: cx + s, y: cy - s + d };
+  d -= 2 * s;
+  if (d < 2 * s) return { x: cx + s - d, y: cy + s };
+  d -= 2 * s;
+  if (d < 2 * s) return { x: cx - s, y: cy + s - d };
+  d -= 2 * s;
+  return { x: cx - s + d, y: cy - s };
+}
+function angleTo(p, cx, cy) {
+  return Math.atan2(p.x - cx, cy - p.y) * 180 / Math.PI;
+}
+function modernHands({ cx, cy, hour, minute, second, tail, width, seconds }) {
+  const arm = (cls, length) => `<g class="hand ${cls}">
+    <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${f2(cy - 6)}" stroke-width="${f2(Math.max(0.5, width * 0.32))}" />
+    <line x1="${cx}" y1="${f2(cy - 6)}" x2="${cx}" y2="${f2(cy - length)}" stroke-width="${width}" />
+  </g>`;
+  return `${arm("hour", hour)}${arm("minute", minute)}${seconds ? `<g class="hand second"><line x1="${cx}" y1="${f2(cy + tail)}" x2="${cx}" y2="${f2(cy - second)}" stroke-width="0.55" /></g>` : ""}<circle class="hub" cx="${cx}" cy="${cy}" r="1.7" />${seconds ? `<circle class="hub-ring" cx="${cx}" cy="${cy}" r="1.15" />` : ""}<circle class="hub-pin" cx="${cx}" cy="${cy}" r="0.55" />`;
+}
+function analogHands(el, { cx = 50, cy = 50, hour, minute, second, tail = 7, width = 3, weight = 1 }) {
+  const style = el.hands;
+  const seconds = el.showSeconds;
+  const inner = style === "modern" ? modernHands({ cx, cy, hour, minute, second, tail, width, seconds }) : styledHands(style, { cx, cy, hour, minute, second, tail, weight: weight * (style === "slender" ? 1.1 : 1), seconds, extra: "hand" });
+  return `<g class="hands">${inner}</g>`;
+}
+function turnHands(el, { hour, minute, second }, cx = 50, cy = 50) {
+  const turn = (sel, deg) => el.$(sel)?.setAttribute("transform", `rotate(${deg.toFixed(3)} ${cx} ${cy})`);
+  turn(".hour", hour);
+  turn(".minute", minute);
+  if (second !== void 0) turn(".second", second);
+}
+var ONES = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen"
+];
+var TENS = ["", "", "twenty", "thirty", "forty", "fifty"];
+function numberWord(n) {
+  if (n < 20) return ONES[n];
+  const t = TENS[Math.floor(n / 10)];
+  return n % 10 ? `${t}-${ONES[n % 10]}` : t;
+}
+function ordinal(n) {
+  const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th";
+  return `${n}${s}`;
+}
+
+// src/faces/scatter.js
+var ORDER = [11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+var ROWS = [7, 6, 7, 6];
+var scatter = {
+  theme: "moss",
+  tickRate: () => "minute",
+  styles: (
+    /* css */
+    `
+    :host([variant="scatter"]) .screen { background: linear-gradient(color-mix(in srgb, var(--_surface), #fff 14%), color-mix(in srgb, var(--_surface), #000 38%)); }
+    .v-scatter text { font-family: var(--_font); }
+    .v-scatter .now { fill: var(--_accent); font-weight: 800; letter-spacing: -0.03em; }
+    .v-scatter .ampm { font-weight: 700; letter-spacing: 0; fill: var(--_ink); }
+    .v-scatter .n { fill: var(--_ink); font-weight: 700; letter-spacing: -0.04em; }
+  `
+  ),
+  template(el) {
+    const script = el.script;
+    const r = seeded(seedOf(el));
+    const colors = el.hasAttribute("palette") || el.hasAttribute("colors") ? tileColors(el) : null;
+    let k = 0;
+    let last = -1;
+    const nums = ROWS.flatMap((count, row) => {
+      const y = 47.5 + row * 12.6;
+      const xs = Array.from({ length: count }, (_, i) => 17 + i * 66 / (count - 1));
+      if (row % 2) xs.reverse();
+      return xs.map((x) => {
+        const h = ORDER[k++ % 12];
+        const size = 11.5 + r() * 4.5;
+        const rot = r() * 70 - 35;
+        const dx = r() * 5 - 2.5;
+        const dy = r() * 5 - 2.5;
+        let fill = "";
+        if (colors) {
+          let i;
+          do
+            i = Math.floor(r() * colors.length);
+          while (colors.length > 1 && i === last);
+          last = i;
+          fill = ` style="fill:${colors[i]}"`;
+        }
+        return `<text class="n" x="${f2(x + dx)}" y="${f2(y + dy)}" font-size="${f2(size)}" text-anchor="middle" dominant-baseline="central" transform="rotate(${f2(rot)} ${f2(x + dx)} ${f2(y + dy)})"${fill}>${numeral(h, script)}</text>`;
+      });
+    }).join("");
+    const dir = script === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-scatter" viewBox="0 0 100 100" aria-hidden="true"${dir}>
+      <text class="now" x="50" y="28" font-size="25" text-anchor="middle"></text>
+      ${nums}</svg>`;
+  },
+  update(el, z) {
+    const now = el.$(".now");
+    if (!now) return;
+    const h12 = el.hour12;
+    const h = h12 ? z.hours % 12 || 12 : z.hours;
+    const script = el.script === "persian" ? "persian" : "western";
+    const text = `${digits(h12 ? h : String(h).padStart(2, "0"), script)}${digits(String(z.minutes).padStart(2, "0"), script)}`;
+    const ampm = h12 ? `<tspan class="ampm" font-size="7" dx="1" dy="-11">${z.hours < 12 ? "am" : "pm"}</tspan>` : "";
+    now.innerHTML = `${text}${ampm}`;
+  }
+};
+
+// src/faces/dots.js
+var XS = [12, 31, 50, 69, 88];
+var ACCENTS = [[0, 0, 0], [2, 0, 7], [4, 0, 2], [4, 2, 10], [4, 4, 4], [2, 4, 1], [0, 4, 9], [0, 2, 6]];
+var NUMERAL_AT = { "2,0": 12, "4,2": 3, "2,4": 6, "0,2": 9 };
+var dots = {
+  theme: "porcelain",
+  styles: (
+    /* css */
+    `
+    .v-dots .dot { fill: var(--_ink); }
+    .v-dots .numeral { font-family: var(--_font); font-weight: 700; letter-spacing: -0.03em; }
+  `
+  ),
+  template(el) {
+    const colors = tileColors(el);
+    const script = el.numeralsOrNone("none");
+    const accent = new Map(ACCENTS.map(([c, r, slot], i) => [`${c},${r}`, colors.length >= 12 ? colors[slot] : colors[i % colors.length]]));
+    let grid = "";
+    XS.forEach((y, row) => XS.forEach((x, col) => {
+      const key = `${col},${row}`;
+      if (key === "2,2") return;
+      const fill = accent.get(key);
+      if (script !== "none" && NUMERAL_AT[key]) {
+        const text = numeral(NUMERAL_AT[key], script);
+        const size = script === "roman" ? Math.min(11, 24 / text.length) : 11;
+        grid += `<text class="numeral" x="${x}" y="${y}" font-size="${size}" text-anchor="middle" dominant-baseline="central" style="fill:${fill}">${text}</text>`;
+        return;
+      }
+      grid += `<circle class="dot" cx="${x}" cy="${y}" r="3.3"${fill ? ` style="fill:${fill}"` : ""} />`;
+    }));
+    const dir = script === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-dots" viewBox="0 0 100 100" aria-hidden="true"${dir}>${grid}${analogHands(el, { hour: 22, minute: 33, second: 38, tail: 8, width: 3.6, weight: 1.25 })}</svg>`;
+  },
+  update(el, z) {
+    turnHands(el, handAngles(z, { smooth: el.tickRate === "frame" }));
+  }
+};
+
+// src/faces/circles.js
+var XS2 = [18.5, 50, 81.5];
+var SLOTS = [3, 6, 10, 1, 2, 7, 0, 5, 9];
+var NUMERAL_AT2 = { 1: 12, 5: 3, 7: 6, 3: 9 };
+var circles = {
+  theme: "porcelain",
+  styles: (
+    /* css */
+    `
+    .v-circles .numeral { font-family: var(--_font); font-weight: 600; letter-spacing: -0.02em; }
+  `
+  ),
+  template(el) {
+    const colors = tileColors(el);
+    const own = el.hasAttribute("colors");
+    const script = el.numeralsOrNone("western");
+    let body = "";
+    XS2.forEach((y, row) => XS2.forEach((x, col) => {
+      const i = row * 3 + col;
+      const fill = own || colors.length < 12 ? colors[i % colors.length] : colors[SLOTS[i]];
+      body += `<circle class="disc" cx="${x}" cy="${y}" r="15" style="fill:${fill}" />`;
+      if (script !== "none" && NUMERAL_AT2[i]) {
+        const text = numeral(NUMERAL_AT2[i], script);
+        const size = script === "roman" ? Math.min(9, 21 / text.length) : 9;
+        const ink = inkFor(fill, "var(--_ink)");
+        body += `<text class="numeral" x="${x}" y="${y}" font-size="${size}" text-anchor="middle" dominant-baseline="central" style="fill:${ink}">${text}</text>`;
+      }
+    }));
+    const dir = script === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-circles" viewBox="0 0 100 100" aria-hidden="true"${dir}>${body}${analogHands(el, { hour: 21, minute: 31, second: 35, tail: 7, width: 2.8, weight: 1.1 })}</svg>`;
+  },
+  update(el, z) {
+    turnHands(el, handAngles(z, { smooth: el.tickRate === "frame" }));
+  }
+};
+
+// src/faces/square.js
+var OUTER = 40;
+var INNER = 29;
+var pad = (n) => String(n).padStart(2, "0");
+var square = {
+  theme: "rose",
+  styles: (
+    /* css */
+    `
+    :host([variant="square"]) { --_rim-r: var(--bezel-radius, 12cqw); }
+    :host([variant="square"]) .screen { background: linear-gradient(color-mix(in srgb, var(--_surface), #fff 30%), color-mix(in srgb, var(--_surface), #000 6%)); }
+    .v-square text { font-family: var(--_font); fill: var(--_ink); }
+    .v-square .hr { font-weight: 500; letter-spacing: -0.06em; }
+    .v-square .mn { font-weight: 500; letter-spacing: -0.02em; }
+    .v-square .md { fill: var(--_ink); opacity: .55; }
+    .v-square .is-now { fill: var(--_accent); opacity: 1; }
+    .v-square .md.is-now { r: 0.95px; }
+  `
+  ),
+  template(el) {
+    const script = el.script === "persian" ? "persian" : "western";
+    const label = (cls, i, p, size) => `<text class="${cls}" data-n="${i}" x="${f2(p.x)}" y="${f2(p.y)}" font-size="${size}" text-anchor="middle" dominant-baseline="central">${digits(pad(i), script)}</text>`;
+    const hours = Array.from({ length: 24 }, (_, i) => label("hr", i, squarePoint(i / 24, 50, 50, OUTER), 9.2)).join("");
+    const minutes = Array.from({ length: 60 }, (_, i) => {
+      const dot = squarePoint(i / 60, 50, 50, INNER);
+      const dotMark = `<circle class="md" data-n="${i}" cx="${f2(dot.x)}" cy="${f2(dot.y)}" r="0.45" />`;
+      return i % 5 ? dotMark : `${dotMark}${label("mn", i, squarePoint(i / 60, 50, 50, INNER - 4.2), 3.6)}`;
+    }).join("");
+    const dir = script === "persian" ? ' direction="ltr"' : "";
+    return `<svg class="face v-square" viewBox="0 0 100 100" aria-hidden="true"${dir}>
+      ${hours}${minutes}
+      ${analogHands(el, { hour: 12, minute: 19, second: 22, tail: 5, width: 1.9, weight: 0.8 })}</svg>`;
+  },
+  update(el, z, first) {
+    const smooth = el.tickRate === "frame";
+    const s = z.seconds + (smooth ? z.millis / 1e3 : 0);
+    const m = z.minutes + s / 60;
+    const h = z.hours + m / 60;
+    const aim = (t, r) => angleTo(squarePoint(t, 50, 50, r), 50, 50);
+    turnHands(el, { hour: aim(h / 24, OUTER), minute: aim(m / 60, INNER), second: aim(s / 60, INNER) });
+    if (first || el.$(".md.is-now")?.dataset.n !== String(z.minutes)) {
+      for (const t of el.$$(".is-now")) t.classList.remove("is-now");
+      el.$(`.hr[data-n="${z.hours}"]`)?.classList.add("is-now");
+      el.$(`.md[data-n="${z.minutes}"]`)?.classList.add("is-now");
+      el.$(`.mn[data-n="${z.minutes}"]`)?.classList.add("is-now");
+    }
+  }
+};
+
+// src/faces/perimeter.js
+var TRACK = 27;
+var written = /* @__PURE__ */ new WeakMap();
+var pad2 = (n) => String(n).padStart(2, "0");
+function timeInWords(hours, minutes) {
+  const h = numberWord(hours % 12 || 12);
+  if (!minutes) return `${h} o'clock`;
+  return `${h} ${minutes < 10 ? `oh ${numberWord(minutes)}` : numberWord(minutes)}`;
+}
+var fit = (text, width, max, em = 0.74) => f2(Math.min(max, width / (Math.max(1, text.length) * em)));
+var perimeter = {
+  theme: "phosphor",
+  tickRate: (el) => !el.showSeconds ? "second" : el.getAttribute("sweep") === "tick" ? "second" : "frame",
+  styles: (
+    /* css */
+    `
+    .v-perimeter text { font-family: var(--bezel-font-mono, ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace); fill: var(--_ink); }
+    .v-perimeter .edge { letter-spacing: 0.14em; font-weight: 500; }
+    .v-perimeter .words { fill: color-mix(in srgb, var(--_ink), #fff 15%); letter-spacing: 0.18em; }
+    .v-perimeter .dot { fill: var(--_ink); opacity: .5; }
+    .v-perimeter .mark { fill: var(--_ink); opacity: .55; letter-spacing: 0; }
+    .v-perimeter .marker line { stroke: var(--_accent); stroke-width: 0.6; stroke-linecap: round; }
+    .v-perimeter .marker text { fill: var(--_accent); font-weight: 600; letter-spacing: 0; }
+  `
+  ),
+  template(el) {
+    let track = "";
+    for (let i = 0; i < 60; i++) {
+      const p = squarePoint(i / 60, 50, 50, TRACK);
+      track += `<circle class="dot" cx="${f2(p.x)}" cy="${f2(p.y)}" r="${i % 5 ? 0.38 : 0.7}" />`;
+      if (i % 5 === 0) {
+        const q = squarePoint(i / 60, 50, 50, TRACK + 4.4);
+        track += `<text class="mark" x="${f2(q.x)}" y="${f2(q.y)}" font-size="3.2" text-anchor="middle" dominant-baseline="central">${pad2(i)}</text>`;
+      }
+    }
+    return `<svg class="face v-perimeter" viewBox="0 0 100 100" aria-hidden="true">
+      <text class="edge words top" x="50" y="10.5" text-anchor="middle" dominant-baseline="central"></text>
+      <text class="edge left" x="10.5" y="50" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 10.5 50)"></text>
+      <text class="edge right" x="89.5" y="50" text-anchor="middle" dominant-baseline="central" transform="rotate(90 89.5 50)"></text>
+      <text class="edge bottom" x="50" y="89.5" text-anchor="middle" dominant-baseline="central" transform="rotate(180 50 89.5)"></text>
+      ${track}
+      <g class="marker"><line x1="50" y1="${50 - TRACK + 1.4}" x2="50" y2="${50 - TRACK - 1.4}" /><text x="50" y="${50 - TRACK + 4.6}" font-size="4.2" text-anchor="middle" dominant-baseline="central"></text></g>
+    </svg>`;
+  },
+  update(el, z, first) {
+    const seconds = el.showSeconds;
+    const smooth = el.tickRate === "frame";
+    const s = z.seconds + (smooth ? z.millis / 1e3 : 0);
+    const t = seconds ? s / 60 : (z.minutes + s / 60) / 60;
+    const value = seconds ? z.seconds : z.minutes;
+    perimeter.marker(el, t, value);
+    const key = `${z.hours}:${z.minutes}`;
+    if (!first && written.get(el) === key) return;
+    written.set(el, key);
+    const n = names(el.locale);
+    const up = (s2) => s2.toLocaleUpperCase(el.locale);
+    const set = (sel, text, width, max) => {
+      const node = el.$(sel);
+      if (!node) return;
+      node.textContent = text;
+      node.setAttribute("font-size", fit(text, width, max));
+    };
+    set(".top", up(timeInWords(z.hours, z.minutes)), 64, 6.2);
+    const week = isoWeek(z.year, z.month, z.day);
+    set(".left", `${formatClock(z.hours, z.minutes, el.hour12)} \xB7 WK ${week} \xB7 DAY ${dayOfYear(z.year, z.month, z.day)}`, 66, 4.8);
+    set(".right", up(`${n.weekdayLong[z.weekday]} ${z.day} ${n.monthLong[z.month]}`), 66, 4.8);
+    set(".bottom", String(z.year), 40, 5.4);
+  },
+  /** Moves the marker to `t` of the way round the track, labelled with `value`. */
+  marker(el, t, value) {
+    const g = el.$(".marker");
+    if (!g) return;
+    const p = squarePoint(t, 50, 50, TRACK);
+    const side = Math.floor(((t * 8 + 1) % 8 + 8) % 8 / 2);
+    const deg = side * 90;
+    g.setAttribute("transform", `translate(${f2(p.x - 50)} ${f2(p.y - 50 + TRACK)}) rotate(${deg} 50 ${50 - TRACK})`);
+    const label = g.querySelector("text");
+    if (label) {
+      const text = pad2(value);
+      if (label.textContent !== text) label.textContent = text;
+      label.setAttribute("transform", `rotate(${-deg} 50 ${50 - TRACK + 4.6})`);
+    }
+  }
+};
+
+// src/faces/grammar.js
+var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+var POS_SLOT = { pronoun: 10, verb: 0, number: 2, preposition: 6, noun: 7, "proper noun": 4, determiner: 8, adverb: 1, ordinal: 9 };
+var LINES = ["time", "date", "week", "day"];
+function timeWords(hours, minutes) {
+  const h = hours % 12 || 12;
+  const next = h % 12 + 1;
+  const w = [["It", "pronoun"], ["is", "verb"]];
+  const num = (n) => [numberWord(n), "number"];
+  if (minutes === 0) return [...w, num(h), ["o'clock", "adverb"]];
+  if (minutes === 15) return [...w, ["quarter", "noun"], ["past", "preposition"], num(h)];
+  if (minutes === 30) return [...w, ["half", "noun"], ["past", "preposition"], num(h)];
+  if (minutes === 45) return [...w, ["quarter", "noun"], ["to", "preposition"], num(next)];
+  const past = minutes < 30;
+  const m = past ? minutes : 60 - minutes;
+  return [...w, num(m), [m === 1 ? "minute" : "minutes", "noun"], [past ? "past" : "to", "preposition"], num(past ? h : next)];
+}
+function grammarLines(z) {
+  const days = daysInYear(z.year);
+  const weeks = isoWeek(z.year, 11, 28);
+  return {
+    time: timeWords(z.hours, z.minutes),
+    date: [[DAYS[z.weekday], "proper noun"], ["the", "determiner"], [ordinal(z.day), "ordinal"], ["of", "preposition"], [MONTHS[z.month], "proper noun"], [String(z.year), "number"]],
+    week: [["week", "noun"], [String(isoWeek(z.year, z.month, z.day)), "number"], ["of", "preposition"], [String(weeks), "number"]],
+    day: [["day", "noun"], [String(dayOfYear(z.year, z.month, z.day)), "number"], ["of", "preposition"], [String(days), "number"]]
+  };
+}
+var FONTS = ["chunky", "serif", "mono"];
+var JUSTIFY = ["flex-start", "center", "flex-end", "space-between"];
+var grammar = {
+  theme: "graphite",
+  tickRate: () => "minute",
+  styles: (
+    /* css */
+    `
+    .v-grammar { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2.6cqw;
+      padding: calc(7cqw + var(--_safe)) calc(6cqw + var(--_safe)); overflow: hidden; color: var(--_ink); }
+    .v-grammar .row { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: 1.8cqw; row-gap: 1.2cqw; }
+    .v-grammar .w { display: inline-flex; flex-direction: column; line-height: 1; }
+    .v-grammar .tag { font-family: var(--_mono); font-size: 3cqw; line-height: 1.15; padding: 0 1.1cqw; border-radius: 0.7cqw;
+      margin-block-end: 0.7cqw; inline-size: max-content; white-space: nowrap; }
+    .v-grammar .tag.blank { visibility: hidden; }
+    .v-grammar .t { padding: 0 0.9cqw; border-radius: 0.7cqw; white-space: nowrap; }
+    .v-grammar .chunky { font-family: var(--_font); font-weight: 900; letter-spacing: -0.03em; }
+    .v-grammar .serif { font-family: var(--_serif); font-weight: 400; }
+    .v-grammar .mono { font-family: var(--_mono); font-weight: 400; letter-spacing: -0.02em; }
+    .v-grammar .italic { font-style: italic; }
+    :host([hide-tags]) .v-grammar .tag { visibility: hidden; }
+    :host([hide-tags]) .v-grammar .t { background: none !important; }
+    :host([variant="grammar"]) {
+      --_serif: var(--bezel-font-serif, "DM Serif Display", "Playfair Display", "Iowan Old Style", Georgia, serif);
+      --_mono: var(--bezel-font-mono, "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+    }
+  `
+  ),
+  template(el, z) {
+    return `<div class="v-grammar" aria-hidden="true">${grammar.body(el, z)}</div>`;
+  },
+  /** The rows of words. Rebuilt each minute, with the same seed, so the look holds steady. */
+  body(el, z) {
+    const r = seeded(seedOf(el));
+    const pick = seeded(seedOf(el) + 99);
+    const colors = tileColors(el);
+    const byPos = el.getAttribute("color-by") === "pos";
+    const wanted = (el.getAttribute("lines") ?? "").split(/[\s,]+/).filter((l) => LINES.includes(l));
+    const shown = wanted.length ? LINES.filter((l) => wanted.includes(l)) : LINES;
+    const all = grammarLines(z);
+    let last = -1;
+    return shown.map((line) => {
+      const tier = line === "time" ? 1 : line === "date" ? 2 : 3;
+      const words = all[line];
+      const pad3 = f2(r() * 7.5);
+      const justify = JUSTIFY[Math.floor(r() * JUSTIFY.length)];
+      const tagged = words.map(() => r() < 0.4);
+      if (!tagged.some(Boolean)) tagged[Math.floor(r() * words.length)] = true;
+      const html = words.map(([text, pos], i) => {
+        let size;
+        let font;
+        if (tier === 1) {
+          const big = r() < 0.5;
+          size = big ? 8.6 + r() * 6.4 : 4.6 + r() * 2.8;
+          font = big ? "chunky" : FONTS[1 + Math.floor(r() * 2)];
+        } else if (tier === 2) {
+          size = 4.2 + r() * 4.6;
+          font = FONTS[Math.floor(r() * 3)];
+        } else {
+          size = 3.7 + r() * 1.8;
+          font = r() < 0.7 ? "mono" : "serif";
+        }
+        size = Math.min(size, 82 / (text.length * 0.62));
+        const tilt = (tier === 1 ? r() * 16 - 8 : r() * 10 - 5).toFixed(1);
+        const lift = f2(r() * 2.6 - 1.3);
+        const align = r() < 0.5 ? "flex-start" : "flex-end";
+        const italic = font === "serif" && r() < 0.5 ? " italic" : "";
+        let slot;
+        if (byPos) slot = POS_SLOT[pos];
+        else {
+          do
+            slot = Math.floor(pick() * 12);
+          while (slot === last);
+          last = slot;
+        }
+        const color = colors.length >= 12 && byPos ? colors[slot] : colors[slot % colors.length];
+        const ink = inkFor(color, "#111");
+        const tag = tagged[i] ? `<span class="tag" style="background:${color};color:${ink}">${pos}</span>` : '<span class="tag blank">-</span>';
+        const highlight = tagged[i] ? `;background:color-mix(in srgb, ${color} 26%, transparent)` : "";
+        return `<span class="w" style="transform:rotate(${tilt}deg) translateY(${lift}cqw);align-items:${align}">${tag}<span class="t ${font}${italic}" style="font-size:calc(var(--k, 1) * ${f2(size)}cqw)${highlight}">${esc(text)}</span></span>`;
+      }).join("");
+      return `<div class="row" style="justify-content:${justify};padding-inline-start:${pad3}cqw">${html}</div>`;
+    }).join("");
+  },
+  update(el, z, first) {
+    const root = el.$(".v-grammar");
+    if (!root) return;
+    if (!first) root.innerHTML = grammar.body(el, z);
+    grammar.fit(root);
+  },
+  /**
+   * Shrinks the words a step at a time until everything fits on the screen. Most
+   * minutes need nothing; long times such as "twenty-nine minutes to twelve" might.
+   */
+  fit(root) {
+    let k = 1;
+    root.style.setProperty("--k", "1");
+    while (root.scrollHeight > root.clientHeight + 1 && k > 0.55) {
+      k -= 0.05;
+      root.style.setProperty("--k", k.toFixed(2));
+    }
+  }
+};
+
+// src/faces/index.js
+var FACES = { scatter, dots, circles, square, perimeter, grammar };
+
+// src/tiles/clock.js
+var VARIANTS = /* @__PURE__ */ new Set(["numerals", "relief", "classic", "dual", ...Object.keys(FACES)]);
+var SCRIPTS = /* @__PURE__ */ new Set(["western", "roman", "persian"]);
+var DEFAULT_THEME = {
+  numerals: "sage",
+  relief: "blush",
+  classic: "porcelain",
+  dual: "porcelain",
+  ...Object.fromEntries(Object.entries(FACES).map(([name, face]) => [name, face.theme]))
+};
+var LUME = /* @__PURE__ */ new Set(["green", "blue"]);
 function zoneOffset(ms, from, to) {
   const wall = (tz) => {
     const z = zoned(ms, tz);
@@ -721,7 +1261,26 @@ var BIG = {
   persian: { size: 50, items: [[12, 50, 44], [9, 20, 69], [3, 80, 69], [6, 50, 95]] }
 };
 var BezelClock = class _BezelClock extends BezelElement {
-  static attributes = ["variant", "numerals", "hide-seconds", "hide-date", "sweep", "second-timezone", "second-label", "label", "hands", "home", "hide-labels", "lume"];
+  static attributes = [
+    "variant",
+    "numerals",
+    "hide-seconds",
+    "hide-date",
+    "sweep",
+    "second-timezone",
+    "second-label",
+    "label",
+    "hands",
+    "home",
+    "hide-labels",
+    "lume",
+    "palette",
+    "colors",
+    "seed",
+    "color-by",
+    "lines",
+    "hide-tags"
+  ];
   // `zone` colours the second time zone's hour hand on the dual face.
   // Dual styles: a landscape case whose round ends share their centres with the two dials.
   // Lume: numerals that glow, as on a watch dial; best on dark faces.
@@ -734,7 +1293,11 @@ var BezelClock = class _BezelClock extends BezelElement {
     stone: { surface: "#D9DADC", ink: "#2B2D31", hand: "#25272B", accent: "#FF5A1F", zone: "#2346D8" },
     midnight: { surface: "#1B1F27", ink: "#E9E3D6", hand: "#E9E3D6", accent: "#FFB547", zone: "#FFB547" },
     porcelain: { surface: "#F4F4F2", ink: "#17181A", hand: "#17181A", accent: "#FF5A1F", zone: "#2440A8" },
-    onyx: { surface: "#161719", ink: "#ECECEA", hand: "#D3D6DA", accent: "#FF7A45", zone: "#8EA4FF" }
+    onyx: { surface: "#161719", ink: "#ECECEA", hand: "#D3D6DA", accent: "#FF7A45", zone: "#8EA4FF" },
+    // Added with the 2.3 faces, and usable on any of them.
+    moss: { surface: "#5E6E58", ink: "#FFFFFF", hand: "#FFFFFF", accent: "#DFFF4F", zone: "#DFFF4F" },
+    rose: { surface: "#C24D5E", ink: "#160709", hand: "#160709", accent: "#FFF4EF", zone: "#FFF4EF" },
+    phosphor: { surface: "#060707", ink: "#9DB8AE", hand: "#9DB8AE", accent: "#E6F06A", zone: "#E6F06A" }
   };
   static styles = (
     /* css */
@@ -796,6 +1359,8 @@ var BezelClock = class _BezelClock extends BezelElement {
     .lume .numeral { fill: color-mix(in srgb, var(--_ink) 70%, var(--_glow)); filter: url(#lume); }
     .lume-glow { flood-color: var(--_glow); flood-opacity: .9; }
 
+    ${Object.values(FACES).map((face) => face.styles).join("")}
+
     .screen { background:
       radial-gradient(120% 90% at 30% 10%, color-mix(in srgb, var(--_surface), #fff 7%) 0%, var(--_surface) 55%, color-mix(in srgb, var(--_surface), #000 8%) 100%); }
   `
@@ -816,8 +1381,8 @@ var BezelClock = class _BezelClock extends BezelElement {
   }
   /** The dual face defaults to the metal frame; every other face to the black bezel. */
   get frame() {
-    const f2 = this.getAttribute("frame");
-    if (FRAMES.has(f2)) return f2;
+    const f3 = this.getAttribute("frame");
+    if (FRAMES.has(f3)) return f3;
     return this.variant === "dual" ? "metal" : "device";
   }
   get secondZone() {
@@ -850,12 +1415,20 @@ var BezelClock = class _BezelClock extends BezelElement {
   get showSeconds() {
     return !this.flag("hide-seconds");
   }
+  /** Dots and Circles take numerals="none"; returns the script, "none", or `fallback`. */
+  numeralsOrNone(fallback) {
+    const s = this.getAttribute("numerals");
+    return s === "none" || SCRIPTS.has(s) ? s : fallback;
+  }
   get tickRate() {
+    const face = FACES[this.variant];
+    if (face?.tickRate) return face.tickRate(this);
     if (!this.showSeconds) return "second";
     return this.getAttribute("sweep") === "tick" ? "second" : "frame";
   }
-  template() {
+  template(z) {
     const v = this.variant;
+    if (FACES[v]) return FACES[v].template(this, z);
     if (v === "dual") return this.#dual();
     const script = this.script;
     let dial = "";
@@ -991,6 +1564,11 @@ var BezelClock = class _BezelClock extends BezelElement {
     return `<svg class="face v-dual home-${homeSide}${lume}" viewBox="0 0 150 100" aria-hidden="true"${dir}>${DEFS}${track(home)}${track(away, home)}${numerals(home, homeSide)}${numerals(away, awaySide)}${labels}<g class="hands"><g class="zone">${set(away, { hour: "z-hour", minute: "z-minute", second: "z-second" }, false)}</g>${set(home, { hour: "hour", minute: "minute", second: "second" }, seconds)}</g></svg>`;
   }
   update(z, first) {
+    const face = FACES[this.variant];
+    if (face) {
+      face.update(this, z, first);
+      return;
+    }
     if (this.variant === "dual") {
       this.#updateDual(z, first);
       return;
@@ -1351,7 +1929,7 @@ function normalise(forecast, air, { units = "metric", place = "" } = {}) {
   };
 }
 function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
-  const f2 = (cDeg) => units === "imperial" ? Math.round(cDeg * 1.8 + 32) : cDeg;
+  const f3 = (cDeg) => units === "imperial" ? Math.round(cDeg * 1.8 + 32) : cDeg;
   const today = /* @__PURE__ */ new Date();
   const iso = (h, m) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   return {
@@ -1359,8 +1937,8 @@ function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
     place,
     units,
     time: null,
-    temperature: f2(14),
-    apparent: f2(12),
+    temperature: f3(14),
+    apparent: f3(12),
     humidity: 76,
     wind: units === "imperial" ? 7 : 11,
     windDirection: 240,
@@ -1368,8 +1946,8 @@ function sampleWeather({ units = "metric", place = DEFAULT_PLACE.name } = {}) {
     condition: "Partly Cloudy",
     sky: "partly",
     isDay: true,
-    high: f2(16),
-    low: f2(9),
+    high: f3(16),
+    low: f3(9),
     sunrise: [iso(7, 31)],
     sunset: [iso(17, 52)],
     aqi: units === "imperial" ? 21 : 18,
@@ -2388,14 +2966,14 @@ var BezelGlance = class extends BezelElement {
   #when(e, z) {
     if (e.allDay) return tr(this.locale, "allDay");
     const opts = { hour: "numeric", minute: "2-digit", hour12: this.hour12, timeZone: this.timeZone };
-    let f2;
+    let f3;
     try {
-      f2 = new Intl.DateTimeFormat(this.locale, opts);
+      f3 = new Intl.DateTimeFormat(this.locale, opts);
     } catch {
-      f2 = new Intl.DateTimeFormat("en-GB", opts);
+      f3 = new Intl.DateTimeFormat("en-GB", opts);
     }
-    if (e.start <= z.ms && e.end > z.ms) return tr(this.locale, "nowUntil", { t: f2.format(e.end) });
-    return f2.format(e.start);
+    if (e.start <= z.ms && e.end > z.ms) return tr(this.locale, "nowUntil", { t: f3.format(e.end) });
+    return f3.format(e.start);
   }
   template(z) {
     const n = names(this.locale);
@@ -2519,7 +3097,7 @@ var BezelPoster = class extends BezelElement {
 define("bezel-poster", BezelPoster);
 
 // src/index.js
-var version = "2.2.0";
+var version = "2.3.0";
 export {
   BezelCalendar,
   BezelClock,
@@ -2530,6 +3108,7 @@ export {
   calendar_exports as calendar,
   define,
   ics_exports as ics,
+  palettes_exports as palettes,
   safeLocale,
   time_exports as time,
   version,

@@ -1,8 +1,26 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 (2026-11-27)
 
-Site only. The component and the npm package are unchanged.
+Six new clock faces, and colour palettes to go with them.
+
+- **Six new faces** on `<bezel-clock>`, set with `variant`. They all work with every frame (bezel, metal or none), theme, size and corner setting, and the analog ones with all three hand designs.
+  - **Scatter:** the time in big bright digits above a tumble of clock numbers, as if tipped out of a dial. Plain by default, or a colour per number with a palette.
+  - **Dots:** a five-by-five dot grid behind the hands, with the corners and edge middles in colour. `numerals` swaps the dots at 12, 3, 6 and 9 for coloured numbers.
+  - **Circles:** nine solid circles with the hands over the middle one. 12, 3, 6 and 9 sit on the edge circles and turn black or white to suit them; `numerals="roman"` or `"none"` change them.
+  - **Square:** a 24-hour dial on a square, with the hours outside and the minutes inside. The hour hand goes round once a day and points right at the hour, and the time now lights up.
+  - **Perimeter:** the time in words, the digital time, week, day of the year, date and year running round the edge, with a marker that circles the middle once a minute (or once an hour with `hide-seconds`).
+  - **Grammar:** the time, date, week and day of the year as a collage of words in mixed type, some tagged with their part of speech. `color-by`, `lines` and `hide-tags` change what it shows. The sentences are written by hand, so every tag is right.
+- **Palettes:** `palette="vibrant|neon|pastel|subtle|spring|summer|autumn|winter"`, eight sets of twelve colours that each run round the whole colour wheel. `colors` takes your own. Text on a coloured shape picks black or white by itself to stay readable.
+- **Seeds:** `seed` sets the arrangement of the Scatter and Grammar faces. The layout holds still from minute to minute; a new number gives a new one.
+- **Themes:** `moss`, `rose` and `phosphor`, the starting colours of the Scatter, Square and Perimeter faces. They work on any clock face.
+- **Week numbers** on the new faces follow the ISO standard, so years like 2026 have 53.
+- Studio: the ten faces in two rows, a palette picker with colour strips, Shuffle for a new arrangement, the Grammar face's lines and tags, and settings that only appear on faces that use them (no Hands tab on faces without hands).
+- Site: a row of the six new faces on the home page; each opens in the Studio.
+- README: a section and image for the new faces and palettes, the Grammar face's typefaces, and refreshed showcase and social preview images.
+- Housekeeping: the faces live in `src/faces/`, one file each. The gzip size budget rises from 28 kB to 35 kB: the bundle is now about 33 kB, which leaves room for small fixes. `numeral()` moved to `src/faces/shared.js` and is still exported from the clock.
+
+### Site
 
 - **Desk displays stay awake.** The display page and desk mode now ask again for the screen to stay on if the browser or the computer lets go (after sleep, on low battery), checking every 20 seconds. Before, they only asked when the page opened or the tab came back, so the screensaver could take over on a long run. Desk mode also asks again after you switch tabs and come back, and still lets go when you close it.
 

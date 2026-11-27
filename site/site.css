@@ -104,6 +104,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .showcase { display: grid; gap: var(--s-6); margin-top: var(--s-7); scroll-margin-top: 80px; }
 .showcase__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-5) clamp(16px, 2.2vw, 28px); align-items: start; }
 .showcase__row--large { grid-template-columns: minmax(0, 3fr) minmax(0, 4fr) minmax(0, 4.5fr); }
+.showcase__row--faces { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.showcase__row--faces .show__label { flex-direction: column; gap: 0; }
+.showcase__row--faces .show__label span { text-align: start; }
 .show {
   all: unset; box-sizing: border-box; display: grid; gap: var(--s-3); min-width: 0; cursor: pointer;
   border-radius: var(--r-3);
@@ -117,6 +120,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @media (max-width: 900px) {
   .showcase { margin-top: var(--s-6); gap: var(--s-5); }
   .showcase__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .showcase__row--faces { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .showcase__row--large { grid-template-columns: 1fr; }
   .showcase__row--large .show:first-child { justify-self: center; width: min(100%, 460px); }
 }
@@ -258,6 +262,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .seg button { all: unset; flex: 1; text-align: center; cursor: pointer; padding: 7px 8px; border-radius: 8px; font-size: 13px; font-weight: 550; color: var(--ink-2); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line-soft); }
 .seg button:focus-visible { outline: 2px solid var(--focus); }
+/* Ten clock faces: wrap into rows of five rather than squeezing into one line. */
+.seg--wrap { flex-wrap: wrap; }
+.seg--wrap button { flex: 1 0 calc(20% - 2px); padding-inline: 4px; font-size: 12.5px; }
+/* Palette picker: a strip of the palette's colours above its name. */
+.pals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pal { all: unset; box-sizing: border-box; display: grid; gap: 5px; padding: 6px; border-radius: 10px; cursor: pointer;
+  background: var(--ground-2); border: 1px solid var(--line-soft); font-size: 12px; font-weight: 550; color: var(--ink-2); text-align: center; }
+.pal[aria-pressed="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 0 0 2px var(--focus); }
+.pal:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.pal__strip { display: flex; block-size: 14px; border-radius: 4px; overflow: hidden; }
+.pal__strip i { flex: 1; }
+.pal__plain { background: repeating-linear-gradient(135deg, var(--line-soft) 0 3px, transparent 3px 6px); }
 .seg--small button { padding: 5px 10px; font-size: 12px; }
 .seg--tall button { display: grid; gap: 2px; padding: 7px 4px; line-height: 1.2; }
 .seg__s { font: 500 11px/1.2 var(--f-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
