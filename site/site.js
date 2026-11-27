@@ -2,8 +2,9 @@
 // The tiles themselves come from the library; this file only drives the page.
 
 import { zoneField, bindZonePickers, labelFor } from './zone-picker.js';
+import { PALETTES } from '../src/core/palettes.js';
 
-const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.2.0/dist/bezel.min.js';
+const CDN = 'https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.3.0/dist/bezel.min.js';
 const STORE_KEY = 'bezel-studio-v3'; // v3: themes and the sample agenda left the Studio
 
 // [CSS value, label, Google Fonts family spec]. The copied code includes the line that loads the chosen face.
@@ -46,7 +47,18 @@ const HAND_STYLES = [
 ];
 
 /** Each clock face's own palette, used until the user picks colours. */
-const CLOCK_DEFAULTS = { numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain' };
+const CLOCK_DEFAULTS = {
+  numerals: 'sage', relief: 'blush', classic: 'porcelain', dual: 'porcelain',
+  scatter: 'moss', dots: 'porcelain', circles: 'porcelain', square: 'rose', perimeter: 'phosphor', grammar: 'graphite',
+};
+// Groups of clock faces, for showing each setting only where it does something.
+const ANALOG = ['numerals', 'relief', 'classic', 'dual', 'dots', 'circles', 'square'];
+const PALETTE_FACES = ['dots', 'circles', 'scatter', 'grammar'];
+const DATED = ['numerals', 'classic']; // faces with a date you can hide
+const face = (a) => a.variant || 'numerals';
+const on = (...faces) => (a) => faces.includes(face(a));
+// Settings that belong to one face only, dropped when the Studio switches to a face that doesn't use them.
+const FACE_ATTRS = { palette: PALETTE_FACES, colors: PALETTE_FACES, seed: ['scatter', 'grammar'], 'color-by': ['grammar'], 'hide-tags': ['grammar'], lines: ['grammar'] };
 /** The frame a tile has when no frame is set: none on the poster, metal on the dual clock, the black bezel elsewhere. */
 const defaultFrame = (type, attrs = {}) => (type === 'poster' ? 'none' : type === 'clock' && attrs.variant === 'dual' ? 'metal' : 'device');
 const isDual = (type, attrs) => type === 'clock' && attrs.variant === 'dual';
@@ -57,7 +69,12 @@ const language = { type: 'select', key: 'locale', label: 'Language', options: LO
 const hours = (when, note = 'Auto follows the language setting.') => ({ type: 'hours', key: 'hour-cycle', label: 'Hours', when, note });
 // Analog clocks show no digits, so they skip Hours.
 // On the clock, language only changes the date ("Fri 23" or "ven. 23"), so it shows only when there is one.
-const clockTime = [timeZone, { ...language, when: (a) => a.variant !== 'relief' && a.variant !== 'dual' && !a['hide-date'] }];
+// The Perimeter face always shows the date; the Scatter and Perimeter faces show a digital time, so they get Hours.
+const clockTime = [
+  timeZone,
+  hours(on('scatter', 'perimeter')),
+  { ...language, when: (a) => (DATED.includes(face(a)) && !a['hide-date']) || face(a) === 'perimeter' },
+];
 const locationField = { type: 'text', key: 'location', label: 'Location', placeholder: 'City or town', hint: "Weather comes live from Open-Meteo. If it can't be reached, the tile shows sample data and says so." };
 const units = { type: 'seg', key: 'units', label: 'Units', options: [['', 'Auto'], ['metric', '°C · km/h'], ['imperial', '°F · mph']], hint: 'Auto follows the language setting: °F in the US, °C elsewhere.' };
 const weekStart = { type: 'seg', key: 'week-start', label: 'Week starts', options: [['', 'Auto'], ['mon', 'Monday'], ['sun', 'Sunday']] };
@@ -84,19 +101,35 @@ const TYPES = {
     colorLabels: { accent: 'Seconds hand' },
     colorHint: 'The seconds hand colour also tints the date on the Classic face.',
     style: [
-      { type: 'seg', key: 'variant', label: 'Face', options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic'], ['dual', 'Dual']] },
-      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']], when: (a) => a.variant !== 'dual' },
+      {
+        type: 'seg', key: 'variant', label: 'Face', wrap: true,
+        options: [['numerals', 'Numerals'], ['relief', 'Relief'], ['classic', 'Classic'], ['dual', 'Dual'], ['scatter', 'Scatter'],
+          ['dots', 'Dots'], ['circles', 'Circles'], ['square', 'Square'], ['perimeter', 'Perimeter'], ['grammar', 'Grammar']],
+      },
+      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']], when: on('numerals', 'relief', 'classic', 'scatter') },
+      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', 'None'], ['western', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳']], hint: 'Swaps the dots at 12, 3, 6 and 9 for coloured numbers.', when: on('dots') },
+      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '1 2 3'], ['roman', 'I II III'], ['persian', '۱ ۲ ۳'], ['none', 'None']], hint: 'Each number turns black or white to suit its circle.', when: on('circles') },
+      { type: 'seg', key: 'numerals', label: 'Numbers', options: [['', '00 01 02'], ['persian', '۰۰ ۰۱ ۰۲']], when: on('square') },
+      { type: 'palette', key: 'palette', label: 'Palette', plain: 'Plain', hint: 'Plain keeps the tumbled numbers in the text colour.', when: on('scatter') },
+      { type: 'palette', key: 'palette', label: 'Palette', when: on('dots', 'circles', 'grammar') },
+      { type: 'seg', key: 'color-by', label: 'Colour', options: [['', 'By word'], ['pos', 'By part of speech']], hint: 'By word gives every word its own colour. By part of speech gives every noun one colour, every verb another, and so on.', when: on('grammar') },
+      { type: 'shuffle', key: 'seed', label: 'Arrangement', hint: 'The layout stays put from minute to minute. Shuffle for a new one.', when: on('scatter', 'grammar') },
       { type: 'seg', key: 'numerals', label: 'Right dial numbers', options: [['', '1 2 3'], ['persian', '۱ ۲ ۳']], hint: 'The left dial always uses Roman numerals.', when: (a) => a.variant === 'dual' },
       { type: 'seg', key: 'lume', label: 'Glowing numerals', options: [['', 'Off'], ['green', 'Green'], ['blue', 'Blue']], hint: 'Like a watch dial at night. The glow shows best on dark colours.', when: (a) => a.variant === 'classic' || a.variant === 'dual' },
     ],
-    hands: true,
+    hands: (a) => ANALOG.includes(face(a)),
     handControls: [
       { type: 'toggle', key: 'hide-seconds', label: 'Seconds hand', invert: true },
       { type: 'seg', key: 'sweep', label: 'Seconds motion', options: [['', 'Smooth sweep'], ['tick', 'Tick']], when: (a) => !a['hide-seconds'] },
     ],
     options: [
       // The Relief face has no date, and only the Classic face has room for a second dial.
-      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: (a) => a.variant !== 'relief' && a.variant !== 'dual' },
+      { type: 'toggle', key: 'hide-date', label: 'Show the date', invert: true, when: on(...DATED) },
+      { type: 'lines', key: 'lines', label: 'Lines', options: [['date', 'Date'], ['week', 'Week'], ['day', 'Day of year']], hint: 'The time is always there. Week numbers follow the ISO standard, so some years have 53.', when: on('grammar') },
+      { type: 'toggle', key: 'hide-tags', label: 'Part-of-speech tags', invert: true, when: on('grammar') },
+      // The Perimeter face has a seconds marker rather than hands.
+      { type: 'toggle', key: 'hide-seconds', label: 'Seconds marker', invert: true, hint: 'Off, the marker counts the minutes instead.', when: on('perimeter') },
+      { type: 'seg', key: 'sweep', label: 'Marker motion', options: [['', 'Smooth'], ['tick', 'Tick']], when: (a) => face(a) === 'perimeter' && !a['hide-seconds'] },
       { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'None', hint: 'A small dial for another city, in place of the 6. Search a city or country, or clear it for none.', when: (a) => a.variant === 'classic' },
       { type: 'zone', key: 'second-timezone', label: 'Second time zone', empty: 'UTC', hint: 'The time on the second dial. Search a city or country, or clear it for UTC.', when: (a) => a.variant === 'dual' },
       { type: 'seg', key: 'home', label: 'Local time on', options: [['', 'Right dial'], ['left', 'Left dial']], hint: 'The home dial is drawn in full; the other tucks behind it.', when: (a) => a.variant === 'dual' },
@@ -354,9 +387,19 @@ function colorValue(type, cfg, key, mode = 'light') {
 /** Which colour set the Colours tab edits and the preview shows. */
 const editingMode = (cfg) => (cfg.attrs['dark-theme'] && state.editing === 'dark' ? 'dark' : 'light');
 
+// Clock faces without hands drop the Hands colour, and some use Accent for something else.
+const FACE_COLORS = {
+  scatter: { keys: ['surface', 'ink', 'accent'], labels: { accent: 'Time' } },
+  perimeter: { keys: ['surface', 'ink', 'accent'], labels: { ink: 'Text and track', accent: 'Seconds marker' } },
+  grammar: { keys: ['surface', 'ink'], labels: { ink: 'Words' } },
+  square: { labels: { accent: 'Seconds hand and the time now' } },
+};
+const faceColors = (type) => (type === 'clock' ? FACE_COLORS[face(state.tiles.clock.attrs)] : null);
+
 function colorKeys(type) {
   // The dual face adds a colour for the second time zone's hour hand.
-  return isDual(type, state.tiles[type].attrs) ? [...TYPES[type].colors, 'zone'] : TYPES[type].colors;
+  if (isDual(type, state.tiles[type].attrs)) return [...TYPES[type].colors, 'zone'];
+  return faceColors(type)?.keys ?? TYPES[type].colors;
 }
 
 function control(c, cfg) {
@@ -384,9 +427,26 @@ function control(c, cfg) {
         .join('')}</div><p class="hint">${esc(c.note)}</p></div>`;
     }
     case 'seg':
-      return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg" role="group" aria-labelledby="${id}-l"${described}>${c.options
+      return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg${c.wrap ? ' seg--wrap' : ''}" role="group" aria-labelledby="${id}-l"${described}>${c.options
         .map(([v, l]) => `<button type="button" data-attr="${c.key}" data-value="${esc(v)}" aria-pressed="${String(value) === v}">${esc(l)}</button>`)
         .join('')}</div>${hint}</div>`;
+    case 'palette': {
+      // A swatch strip per palette. Buttons use data-attr, so clicks go through the same path as a seg.
+      const opts = [['', c.plain ?? 'Vibrant', c.plain ? null : PALETTES.vibrant], ...Object.entries(PALETTES).filter(([k]) => c.plain || k !== 'vibrant').map(([k, v]) => [k, k[0].toUpperCase() + k.slice(1), v])];
+      return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="pals" role="group" aria-labelledby="${id}-l"${described}>${opts
+        .map(([v, l, cols]) => `<button type="button" class="pal" data-attr="${c.key}" data-value="${v}" aria-pressed="${String(value) === v}"><span class="pal__strip" aria-hidden="true">${(cols ?? []).map((col) => `<i style="background:${col}"></i>`).join('') || '<i class="pal__plain"></i>'}</span><span class="pal__l">${esc(l)}</span></button>`)
+        .join('')}</div>${hint}</div>`;
+    }
+    case 'shuffle':
+      return `<div class="field"><span class="field__l">${esc(c.label)}</span><button type="button" class="btn btn--block" data-shuffle="${c.key}"${described}>Shuffle the layout</button>${hint}</div>`;
+    case 'lines': {
+      // Several lines can be on at once, so these are toggle buttons rather than a single choice.
+      const list = String(value || '').split(/[\s,]+/).filter(Boolean);
+      const shown = (k) => !list.length || list.includes(k);
+      return `<div class="field"><span class="field__l" id="${id}-l">${esc(c.label)}</span><div class="seg" role="group" aria-labelledby="${id}-l"${described}>${c.options
+        .map(([v, l]) => `<button type="button" data-line="${v}" aria-pressed="${shown(v)}">${esc(l)}</button>`)
+        .join('')}</div>${hint}</div>`;
+    }
     case 'toggle': {
       const on = c.invert ? !cfg.attrs[c.key] : Boolean(cfg.attrs[c.key]);
       return `<div class="field"><label class="toggle" for="${id}">${esc(c.label)}<input type="checkbox" role="switch" id="${id}" data-toggle="${c.key}" data-invert="${c.invert ? 1 : 0}" ${on ? 'checked' : ''}${described}></label>${hint}</div>`;
@@ -410,7 +470,7 @@ function control(c, cfg) {
 /** One colour picker row: swatch, name and hex value. Changed colours get a ring and a "Custom" tag. */
 function colorRow(type, cfg, key, labelOverride) {
   const t = TYPES[type];
-  const label = labelOverride ?? t.colorLabels?.[key] ?? COLOR_LABELS[key];
+  const label = labelOverride ?? faceColors(type)?.labels?.[key] ?? t.colorLabels?.[key] ?? COLOR_LABELS[key];
   const mode = editingMode(cfg);
   const v = colorValue(type, cfg, key, mode);
   const custom = Boolean(cfg.vars[mode === 'dark' ? `dark-${key}` : key]);
@@ -428,10 +488,16 @@ function visible(list, type) {
   return (list ?? []).filter((c) => !c.when || c.when(attrs));
 }
 
+/** Whether the tile has hands right now: always for the glance, and for the clock's analog faces. */
+function hasHands(type) {
+  const h = TYPES[type].hands;
+  return typeof h === 'function' ? h({ variant: 'numerals', ...state.tiles[type].attrs }) : Boolean(h);
+}
+
 function groupsFor(type) {
   const t = TYPES[type];
   return GROUPS
-    .filter(([g]) => (g !== 'hands' || t.hands) && (g !== 'options' || visible(t.options, type).length) && (g !== 'time' || visible(t.time, type).length))
+    .filter(([g]) => (g !== 'hands' || hasHands(type)) && (g !== 'options' || visible(t.options, type).length) && (g !== 'time' || visible(t.time, type).length))
     .map(([g, l]) => [g, g === 'time' && t.timeLabel ? t.timeLabel : l]);
 }
 
@@ -737,6 +803,10 @@ function bindStudio() {
           delete cfg.attrs['second-label'];
           delete cfg.attrs.lume;
         }
+        for (const [attr, faces] of Object.entries(FACE_ATTRS)) if (!faces.includes(value)) delete cfg.attrs[attr];
+        // Each face reads numerals its own way (Dots and Circles add "none"), so start each face from its default.
+        if (value !== from && !['numerals', 'relief', 'classic', 'scatter'].includes(value)) delete cfg.attrs.numerals;
+        if (['numerals', 'relief', 'classic', 'scatter'].includes(value) && ['none', 'western'].includes(cfg.attrs.numerals)) delete cfg.attrs.numerals;
         if (value !== 'dual') {
           delete cfg.attrs.home;
           delete cfg.attrs['hide-labels'];
@@ -756,6 +826,25 @@ function bindStudio() {
     const hs = e.target.closest('[data-hands]');
     if (hs) {
       setHands(hs.dataset.hands);
+      return;
+    }
+    const shuffle = e.target.closest('[data-shuffle]');
+    if (shuffle) {
+      cfg.attrs[shuffle.dataset.shuffle] = String(1 + Math.floor(Math.random() * 9999));
+      updatePreview();
+      return;
+    }
+    const line = e.target.closest('[data-line]');
+    if (line) {
+      const all = ['date', 'week', 'day'];
+      const list = String(cfg.attrs.lines || '').split(/[\s,]+/).filter((l) => all.includes(l));
+      const current = list.length ? list : all;
+      const next = current.includes(line.dataset.line) ? current.filter((l) => l !== line.dataset.line) : [...current, line.dataset.line];
+      // All three on is the default, so it needs no attribute. Otherwise list the time plus what's on.
+      cfg.attrs.lines = next.length === all.length ? '' : ['time', ...all.filter((l) => next.includes(l))].join(' ');
+      renderPanel();
+      updatePreview();
+      panel.querySelector(`[data-line="${line.dataset.line}"]`)?.focus();
       return;
     }
     const tab = e.target.closest('[data-group]');
