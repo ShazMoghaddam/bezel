@@ -8,5 +8,6 @@
  *   tickRate(el)       optional; otherwise the clock's own (smooth or ticking seconds)
  */
 import { scatter } from './scatter.js';
+import { dots } from './dots.js';
 
-export const FACES = { scatter };
+export const FACES = { scatter, dots };
