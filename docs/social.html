@@ -31,16 +31,7 @@
 </div>
 <div class="tiles">
   <bezel-clock class="wide" variant="dual" theme="onyx" hands="slender" lume="blue" timezone="Europe/London" second-timezone="America/New_York" locale="en-GB"></bezel-clock>
-  <bezel-weather id="w" locale="en-GB" still></bezel-weather>
-  <bezel-calendar timezone="Europe/London" locale="en-GB" hide-time></bezel-calendar>
+  <bezel-clock variant="circles" timezone="Europe/London"></bezel-clock>
+  <bezel-clock variant="grammar" seed="3" timezone="Europe/London"></bezel-clock>
 </div>
-<script type="module">
-  await customElements.whenDefined('bezel-weather');
-  // Fixed data so the image doesn't depend on today's weather.
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById('w').weather = {
-    sample: false, place: 'London', units: 'metric', time: `${today}T13:00`, temperature: 14, humidity: 76, wind: 11,
-    code: 2, condition: 'Partly Cloudy', sky: 'partly', isDay: true, high: 16, low: 9,
-    sunrise: [`${today}T07:31`], sunset: [`${today}T17:52`], aqi: 18, aqiScale: 'eu',
-  };
-</script>
+

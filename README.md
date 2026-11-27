@@ -7,15 +7,15 @@
 
 Bezel is a set of free, open-source web components: five tiles drawn entirely in vectors, so they stay crisp from a 120 px widget to a 4K desk display. Design one in the Studio, paste one line of HTML into any site, turn a spare iPad into a desk clock, or put tiles on your Mac desktop.
 
-![Bezel tiles: a month calendar, a poster calendar and a dual time zone clock in a brushed metal case, then a green numerals clock, an orange relief clock, a weather tile, a glance tile with an agenda, and a dark classic clock with glowing numerals](docs/bezel-tiles.png)
+![Bezel tiles: a month calendar, a poster calendar and a dual time zone clock in a brushed metal case; a green numerals clock, an orange relief clock, a weather tile, a glance tile with an agenda and a dark classic clock with glowing numerals; then the six newest clock faces: nine coloured circles, a grammar collage, scattered numbers, a 24-hour square, a dot grid and a perimeter clock](docs/bezel-tiles.png)
 
 **[Open the Studio](https://shazmoghaddam.github.io/bezel/site/)** to design a tile and copy its code.
 
 - **Sharp at any size.** Every face is SVG and CSS sized in container units.
-- **Yours to style.** Any colour, a light and a dark colour set, three hand designs, three typefaces ready to go, rounder or squarer corners, and a black bezel, a brushed metal case or no frame at all.
+- **Yours to style.** Ten clock faces, eight colour palettes, any colour, a light and a dark colour set, three hand designs, three typefaces ready to go, rounder or squarer corners, and a black bezel, a brushed metal case or no frame at all.
 - **Live data, no keys.** Weather and air quality from [Open-Meteo](https://open-meteo.com), free and keyless. Agendas from standard `.ics` calendar feeds.
 - **Speaks your language.** Dates, times and weather words in English, French, German, Spanish, Italian, Japanese and Persian.
-- **Light.** About 27 kB gzipped with no dependencies and no build step. Every tile on a page shares one timer and pauses when off screen.
+- **Light.** About 33 kB gzipped with no dependencies and no build step. Every tile on a page shares one timer and pauses when off screen.
 - **Accessible.** Each tile describes itself to screen readers and respects reduced-motion settings.
 
 ## Contents
@@ -37,7 +37,7 @@ Bezel is a set of free, open-source web components: five tiles drawn entirely in
 ## Quick start
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.2.0/dist/bezel.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/ShazMoghaddam/bezel@v2.3.0/dist/bezel.min.js"></script>
 
 <bezel-clock variant="relief" theme="ember"></bezel-clock>
 <bezel-weather location="Lisbon"></bezel-weather>
@@ -80,14 +80,14 @@ The Studio only offers settings that have a visible effect on the tile you're ed
 
 ### `<bezel-clock>`
 
-An analog clock with four faces: **Numerals**, with four huge overlapping numbers behind the hands; **Relief**, with numerals pressed into the surface that rise as the minute hand passes; **Classic**, a clean railway dial; and **Dual**, two overlapping dials for two time zones in one landscape case.
+A clock with ten faces. **Numerals**, with four huge overlapping numbers behind the hands; **Relief**, with numerals pressed into the surface that rise as the minute hand passes; **Classic**, a clean railway dial; **Dual**, two overlapping dials for two time zones in one landscape case; and six [newer faces](#the-newer-faces): **Scatter**, **Dots**, **Circles**, **Square**, **Perimeter** and **Grammar**.
 
 | Attribute         | Values                                         | Default            |
 | ----------------- | ---------------------------------------------- | ------------------ |
-| `variant`         | `numerals`, `relief`, `classic`, `dual`        | `numerals`         |
-| `numerals`        | `western`, `roman`, `persian`                  | `western`          |
+| `variant`         | `numerals`, `relief`, `classic`, `dual`, `scatter`, `dots`, `circles`, `square`, `perimeter`, `grammar` | `numerals` |
+| `numerals`        | `western`, `roman`, `persian`; Dots and Circles also take `none` | `western` (`none` on Dots) |
 | `hands`           | `modern`, `lollipop`, `slender`                | `modern`           |
-| `theme`           | `sage`, `cobalt`, `ember`, `graphite`, `blush`, `stone`, `midnight`, `porcelain`, `onyx` | depends on the face |
+| `theme`           | `sage`, `cobalt`, `ember`, `graphite`, `blush`, `stone`, `midnight`, `porcelain`, `onyx`, `moss`, `rose`, `phosphor` | depends on the face |
 | `sweep`           | `smooth`, `tick`                               | `smooth`           |
 | `hide-seconds`    | boolean                                        | off                |
 | `hide-date`       | boolean                                        | off                |
@@ -97,6 +97,12 @@ An analog clock with four faces: **Numerals**, with four huge overlapping number
 | `home`            | Dual only: `left`, `right`                     | `right`            |
 | `hide-labels`     | Dual only: boolean, hides the city names       | off                |
 | `label`           | Dual only: name on the home dial               | the city's name    |
+| `palette`         | Dots, Circles, Scatter, Grammar: `vibrant`, `neon`, `pastel`, `subtle`, `spring`, `summer`, `autumn`, `winter` | `vibrant` (plain on Scatter) |
+| `colors`          | Dots, Circles, Scatter, Grammar: your own colours, comma separated | the palette |
+| `seed`            | Scatter and Grammar: a whole number that sets the arrangement | `7` |
+| `color-by`        | Grammar only: `word`, `pos`                    | `word`             |
+| `lines`           | Grammar only: any of `time`, `date`, `week`, `day` | all four       |
+| `hide-tags`       | Grammar only: boolean, just the words          | off                |
 
 **Hands.** `modern` is the slim original. `lollipop` has tapered batons, a pivot cap and a seconds hand that ends in a round dot. `slender` has fine needles that run just past the pivot, and a hairline seconds hand with a small round counterweight. All three work on every dial, including the one on `<bezel-glance>`.
 
@@ -112,6 +118,27 @@ An analog clock with four faces: **Numerals**, with four huge overlapping number
 ```
 
 **Glowing numerals.** `lume="green"` or `lume="blue"` makes the numerals glow, like a watch dial at night: green-white like vintage lume, or a cooler blue. Only the numerals glow; the dots, ticks and hands stay as they are. It shows best on dark colours such as `onyx` or `midnight`. Set `--bezel-lume` to any colour for a glow of your own.
+
+#### The newer faces
+
+![The six newer clock faces: nine coloured circles, a grammar collage of tagged words, scattered numbers in summer colours, a red 24-hour square, a dot grid with autumn numerals and a dark perimeter clock in a metal case](docs/bezel-faces.png)
+
+- **Scatter.** The time in big bright digits above a tumble of clock numbers, as if they'd been tipped out of a dial. Plain by default; add a `palette` and every number takes its own colour. Starts in `moss`, a green to near-black fade.
+- **Dots.** A five-by-five grid of dots behind the hands, with the corners and the middle of each edge picked out in colour. `numerals="western"` (or `roman`, `persian`) swaps the dots at 12, 3, 6 and 9 for coloured numbers.
+- **Circles.** Nine solid circles in a three-by-three grid, with the hands turning over the middle one. 12, 3, 6 and 9 sit in the middle of each edge and turn black or white to suit their circle; `numerals="none"` leaves them plain.
+- **Square.** A 24-hour dial on a square: the hours round the outside, the minutes round a smaller square inside, both from 00 at the top. The hour hand goes round once a day and points straight at the hour; the current hour and minute light up in the accent colour. Starts in `rose`, with squarer corners.
+- **Perimeter.** Everything runs round the edge: the time in words across the top, the digital time with the week and day of the year up the left, the date down the right and the year along the bottom. A marker travels round the middle once a minute with the seconds, or once an hour with the minutes if you add `hide-seconds`. Starts in `phosphor`.
+- **Grammar.** The time, date, week and day of the year as a loose collage of words in chunky, serif and typewriter type, with some words tagged with their part of speech: *It* (pronoun) *is* (verb) *ten* (number) *past* (preposition) *eleven* (number). The time is always the biggest line, so it still reads at a glance. `color-by="pos"` gives each part of speech one colour; `lines` picks which lines show; `hide-tags` leaves just the words. The sentences are written by hand, so every tag is always right. The words are in English.
+
+Scatter and Grammar look deliberately messy, but `seed` keeps the arrangement where it is from one minute to the next. Change the seed for a new one. Week numbers follow the ISO standard, so some years, such as 2026, have 53. All three hand designs work on Dots, Circles and Square.
+
+```html
+<bezel-clock variant="circles" palette="autumn" numerals="roman"></bezel-clock>
+<bezel-clock variant="grammar" palette="neon" color-by="pos"></bezel-clock>
+<bezel-clock variant="dots" numerals="western" hands="lollipop" colors="#e63946, #2a9d8f, #f4a261"></bezel-clock>
+```
+
+**Palettes.** Eight sets of twelve colours that each run all the way round the colour wheel, so there's always plenty of variety: `vibrant` (bold and saturated), `neon` (electric, best on dark faces), `pastel`, `subtle` (muted and earthy: brick, burnt orange, olive, slate, cocoa), `spring`, `summer`, `autumn` (rust, mustard, moss, plum) and `winter` (holly, frost, pine, midnight). `colors` replaces the palette with your own; a short list repeats. Text on a coloured shape switches between black and white by itself, so it stays readable whatever you pick.
 
 ### `<bezel-calendar>`
 
@@ -230,6 +257,12 @@ In dark mode each colour comes from `--bezel-dark-*` first, then the `dark-theme
 
 Bezel doesn't download fonts itself. On Apple devices it uses SF Pro, the system font; elsewhere it uses [Geist](https://fonts.google.com/specimen/Geist) if your page loads it. The Studio also offers [Fraunces](https://fonts.google.com/specimen/Fraunces), a serif, and [Nunito](https://fonts.google.com/specimen/Nunito), a rounded sans, and adds the line that loads your choice to the copied code. Any other font works too: load it and set `--bezel-font`.
 
+The Grammar face mixes three typefaces: `--bezel-font` used heavy for the chunky words, plus `--bezel-font-serif` and `--bezel-font-mono`. It looks best with [DM Serif Display](https://fonts.google.com/specimen/DM+Serif+Display) and [Space Mono](https://fonts.google.com/specimen/Space+Mono), which it uses when your page loads them. The Perimeter face uses `--bezel-font-mono` too.
+
+```html
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Mono&display=swap">
+```
+
 ```html
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..800&display=swap">
 <bezel-calendar style="--bezel-font: 'Fraunces', serif"></bezel-calendar>
@@ -317,17 +350,18 @@ npm run check        # build, run the tests, and check the size budget
 src/
   core/        the base element, frame, hands, time, calendar maths, weather, .ics parsing, translations
   tiles/       one file per element
+  faces/       the six newer clock faces, and helpers they share
 site/          the website, Studio and desk display
 docs/          the README image and social preview, with the pages that render them
 ubersicht/     the macOS desktop widget
 test/          node:test suites
 ```
 
-Each tile extends `BezelElement`, which handles the frame, colours, shadow DOM, the shared ticker and visibility. A new tile needs a `template()` that returns its markup and an `update()` that moves whatever changes each tick. The bundle has a 28 kB gzip budget, checked in CI. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Each tile extends `BezelElement`, which handles the frame, colours, shadow DOM, the shared ticker and visibility. A new tile needs a `template()` that returns its markup and an `update()` that moves whatever changes each tick. The bundle has a 35 kB gzip budget, checked in CI. A new clock face is a small object in `src/faces/` (`template`, `update` and its styles) added to `src/faces/index.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits
 
-Weather data by [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Typefaces Geist, Fraunces and Nunito (SIL Open Font License). Designed and built by [Shaz Moghaddam](https://shazmoghaddam.github.io), London.
+Weather data by [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Typefaces Geist, Fraunces, Nunito, DM Serif Display and Space Mono (SIL Open Font License). Designed and built by [Shaz Moghaddam](https://shazmoghaddam.github.io), London.
 
 ## Licence
 

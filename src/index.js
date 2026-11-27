@@ -18,4 +18,4 @@ export * as weather from './core/weather.js';
 export * as ics from './core/ics.js';
 export * as palettes from './core/palettes.js';
 
-export const version = '2.2.0';
+export const version = '2.3.0';
