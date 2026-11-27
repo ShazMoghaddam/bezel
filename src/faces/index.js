@@ -9,5 +9,6 @@
  */
 import { scatter } from './scatter.js';
 import { dots } from './dots.js';
+import { circles } from './circles.js';
 
-export const FACES = { scatter, dots };
+export const FACES = { scatter, dots, circles };
