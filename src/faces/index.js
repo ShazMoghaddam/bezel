@@ -12,5 +12,6 @@ import { dots } from './dots.js';
 import { circles } from './circles.js';
 import { square } from './square.js';
 import { perimeter } from './perimeter.js';
+import { grammar } from './grammar.js';
 
-export const FACES = { scatter, dots, circles, square, perimeter };
+export const FACES = { scatter, dots, circles, square, perimeter, grammar };
